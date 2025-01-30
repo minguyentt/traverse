@@ -2,14 +2,31 @@
 
 ## API
 
-** services
-> users
-> auth
-> contracts
+### User making a URL request:
+* HTTP GET Request => /v1/contracts
 
-** DATABASE
-> docker
-> postgresql
+// Home page request
+// consider pagination
+// errors
+
+#### Models
+
+// what the client receives as JSON object
+> APIContractsResponse: model
+    Contracts `json: "contracts"`
+
+> Contracts: model {
+    Name => `json: "name"`
+    Location => `json: "location"`
+    Agency => `json: "agency"`
+    rating => `json: "rating"`
+    ReviewCount => `json: "review_count"`
+}
+
+> Location: model {
+    City => `json: "city"`
+    RegionCode => `json: "region_code"`
+}
 
 
 [TODO]
