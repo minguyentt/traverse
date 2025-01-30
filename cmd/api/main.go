@@ -3,19 +3,33 @@ package main
 import (
 	"context"
 	"fmt"
-	"time"
+	"log"
 	"traverse/configs"
+	"traverse/internal/db"
+	"traverse/internal/routes"
 	"traverse/internal/server"
 )
 
 func main() {
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
-	defer cancel()
+	serverCtx := context.Background()
+	poolCtx := context.Background()
 
-	cfg := configs.LoadConfig()
-	server := server.NewApiServer(ctx, cfg)
-	err := server.Run()
+	router := routes.NewRouter()
+
+	cfg := configs.ENVS
+	pool, err := db.PoolWithConfig(poolCtx, cfg.DB.String())
 	if err != nil {
-		fmt.Printf("server error: %v", err)
+		log.Fatalf("server pool error: %v", err)
+	}
+
+	dsn := pool.Pool().Config()
+	fmt.Println(dsn.ConnConfig.ConnString())
+
+	defer pool.Close()
+
+	server := server.NewApiServer(serverCtx, pool, cfg, router)
+	err = server.Run()
+	if err != nil {
+		log.Fatalf("server error: %v", err)
 	}
 }

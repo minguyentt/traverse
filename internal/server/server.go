@@ -9,62 +9,51 @@ import (
 	"sync"
 	"time"
 	"traverse/configs"
+	"traverse/internal/db"
 	"traverse/internal/routes"
-
-	"github.com/go-chi/chi/v5"
 )
 
 type APIServer struct {
 	ctx    context.Context
+	pool   *db.Pool
 	config *configs.Config
+	router *routes.Router
 	logger *slog.Logger
 }
 
-func NewApiServer(ctx context.Context, cfg *configs.Config) *APIServer {
+func NewApiServer(
+	ctx context.Context,
+	pool *db.Pool,
+	cfg *configs.Config,
+	r *routes.Router,
+) *APIServer {
 	logger := slog.Default().With("area", "API Server")
 
 	return &APIServer{
 		ctx:    ctx,
+		pool:   pool,
 		config: cfg,
+		router: r,
 		logger: logger,
 	}
 }
 
-// router tree nodes
-func PrintTreeRouter(routes []chi.Route, indent string) {
-	for _, route := range routes {
-		fmt.Printf("%sPattern: %s\n", indent, route.Pattern)
-
-		if len(route.Handlers) > 0 {
-			fmt.Printf("%sHandlers:\n", indent)
-			for method, handler := range route.Handlers {
-				fmt.Printf("%s  %s -> %T\n", indent, method, handler)
-			}
-		}
-
-		if route.SubRoutes != nil {
-			fmt.Printf("%sSubroutes:\n", indent)
-			PrintTreeRouter(route.SubRoutes.Routes(), indent+"  ")
-		}
-		fmt.Println()
-	}
-}
-
 func (s *APIServer) Run() error {
-    r := routes.NewRouter()
-    mux := r.SetupRouter()
-
-	PrintTreeRouter(mux.Routes(), "")
+    if err := s.waitForPoolConn(); err != nil {
+        return fmt.Errorf("database connection failed: %w", err)
+    }
+	mux := s.router.SetupRouter()
 
 	server := &http.Server{
-		Addr:         s.config.Port,
+		Addr:         ":" + s.config.SERVER.Port,
 		Handler:      mux,
-		ReadTimeout:  s.config.Server.ReadTimeout,
-		WriteTimeout: s.config.Server.WriteTimeout,
+		ReadTimeout:  s.config.SERVER.ReadTimeout,
+		WriteTimeout: s.config.SERVER.WriteTimeout,
 	}
 
 	var wg sync.WaitGroup
 
+    //FIX: tbh idk what these 2 routines are doing... lol
 	go func() {
 		s.logger.Info("Server started", "Addr", server.Addr)
 		err := server.ListenAndServe()
@@ -88,5 +77,29 @@ func (s *APIServer) Run() error {
 	}()
 	wg.Wait()
 
+	s.logger.Info("Server started and listening", "PORT", server.Addr)
+    s.logger.Info("connected to the database")
+
 	return nil
+}
+
+func (s *APIServer) waitForPoolConn() error {
+    ctx, cancel := context.WithTimeout(s.ctx, 30 * time.Second)
+    defer cancel()
+
+    // implement timer
+    for {
+        select {
+        case <-ctx.Done():
+            return fmt.Errorf("timeout waiting for database conection")
+        case <-time.After(2 * time.Second):
+            conn, err := s.pool.GetConnection(ctx)
+            if err == nil {
+                conn.Release()
+                s.logger.Info("succesfully connected to database")
+                return nil
+            }
+            s.logger.Info("waiting for database connection...", "error", err)
+        }
+    }
 }
