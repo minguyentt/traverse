@@ -15,7 +15,7 @@ import (
 
 type APIServer struct {
 	ctx    context.Context
-	pool   *db.Pool
+	pool   *db.PGDB
 	config *configs.Config
 	router *routes.Router
 	logger *slog.Logger
@@ -23,7 +23,7 @@ type APIServer struct {
 
 func NewApiServer(
 	ctx context.Context,
-	pool *db.Pool,
+	pool *db.PGDB,
 	cfg *configs.Config,
 	r *routes.Router,
 ) *APIServer {

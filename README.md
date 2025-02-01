@@ -28,8 +28,19 @@
     RegionCode => `json: "region_code"`
 }
 
+## API flow requests
+Handlers => Services => Storage => DB
+
+Things to consider:
+- authentication
+- authorization
+- middlewares
+- rate limiting
+
+[NOTES]
+- any data being inserted into the db should already be validated from the business logic before executing
+- app layer => business/domain/internal/... layer => database storage layer
+- id SERIAL PRIMARY KEY, => for auto incrementals when generating user ids
 
 [TODO]
-* implement models & DTOs
-* setup docker & postgresql
 
