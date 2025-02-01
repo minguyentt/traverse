@@ -38,16 +38,16 @@ func main() {
 	migrateCtx := context.Background()
 
 	dbString := cfg.ENVS.DB.String()
-	pool, err := db.PoolWithConfig(migrateCtx, dbString)
+	pgx, err := db.PoolWithConfig(migrateCtx, dbString)
 	if err != nil {
 		log.Fatalf("migration error: %v", err)
 	}
 
     logger.Info("acquired connection from the pool")
 
-	defer pool.Close()
+	defer pgx.Close()
 
-	db := stdlib.OpenDBFromPool(pool.Pool())
+	db := stdlib.OpenDBFromPool(pgx.Pool)
 	if err := goose.SetDialect(DIALECT_DRIVER); err != nil {
 		log.Fatalf("error setting goose dialect: %v", err)
 	}

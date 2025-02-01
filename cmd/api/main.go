@@ -22,7 +22,7 @@ func main() {
 		log.Fatalf("server pool error: %v", err)
 	}
 
-	dsn := pool.Pool().Config()
+	dsn := pool.Config()
 	fmt.Println(dsn.ConnConfig.ConnString())
 
 	defer pool.Close()
