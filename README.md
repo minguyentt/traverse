@@ -44,3 +44,7 @@ Things to consider:
 
 [TODO]
 
+04/02/2025
+
+- finish the users storage layer
+- implement and design seeds for "mock" testing

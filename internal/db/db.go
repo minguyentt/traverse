@@ -94,6 +94,14 @@ func (p *PGDB) GetConnection(ctx context.Context) (*pgxpool.Conn, error) {
     return p.Acquire(ctx)
 }
 
-// func (p *PGDB) GetPool() *pgxpool.Pool {
-//     return p.
-// }
+func (p *PGDB) BeginWithTx(ctx context.Context) (pgx.Tx, error) {
+    tx, err := p.Pool.Begin(ctx)
+    if err != nil {
+        return nil, err
+    }
+
+    defer tx.Rollback(ctx)
+
+    return tx, tx.Commit(ctx)
+
+}

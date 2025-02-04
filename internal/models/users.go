@@ -1,5 +1,7 @@
 package models
 
+import "traverse/internal/auth"
+
 /*
 Sending => server
 
@@ -10,13 +12,14 @@ Sending => server
 
 // start with modeling requesting user id object
 type User struct {
-	Id            int64       `json:"id"`
-	Firstname     string      `json:"firstname"`
-	Username      string      `json:"username"`
-	Email         string      `json:"email"`
-	IsActive      bool        `json:"is_active"`
-	AccountTypeID string      `json:"account_type_id"`
-	AccountType   AccountType `json:"account_type"`
+	ID            int64             `json:"id"`
+	Firstname     string            `json:"firstname"`
+	Username      string            `json:"username"`
+	Password      auth.PasswordHash `json:"-"`
+	Email         string            `json:"email"`
+	IsActive      bool              `json:"is_active"`
+	AccountTypeID string            `json:"account_type_id"`
+	AccountType   AccountType       `json:"account_type"`
 
-	CreatedAt     string      `json:"created_at"`
+	CreatedAt string `json:"created_at"`
 }
