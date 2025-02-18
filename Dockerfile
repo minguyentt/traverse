@@ -1,18 +1,24 @@
-FROM golang:1.23 AS builder
+FROM golang:1.23 AS build-stage
 
+# set destination for COPY
 WORKDIR /app
 
-# copy Go binary files and download dependencies
+# download Go modules and dependencies
 COPY go.mod go.sum ./
 RUN go mod download
 
-# copy all Go files into the container
+# copy source code
 COPY . .
 
-RUN CGO_ENABLED=0 GOOS=linux go build -o ./bin/api ./cmd/api \
-    && go build -o ./bin/migrates ./cmd/migrates
+RUN CGO_ENABLED=0 GOOS=linux go build -o /api ./cmd/api
+
+FROM scratch AS build-release-stage
+
+WORKDIR /app
+
+COPY --from=build-stage /api /api
 
 EXPOSE 8080
 
-CMD [ "/app/bin/api" ]
+CMD ["/api"]
 

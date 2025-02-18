@@ -1,18 +1,19 @@
 package configs
 
 import (
-    "os"
-    "strconv"
-    "time"
+	"fmt"
+	"os"
+	"strconv"
+	"time"
 )
 
-func getEnv(key string, fb string) string {
+func getEnv(key string) string {
 	val, exists := os.LookupEnv(key)
-	if exists {
-		return val
+	if !exists {
+		return fmt.Sprintf("couldn't get env variable for %s", key)
 	}
 
-	return fb
+	return val
 }
 
 func getEnvAsInt32(key string, fb int32) int32 {
