@@ -15,6 +15,24 @@ type Config struct {
 	MIGRATIONS *MigrationConfig
 	SERVER     *ServerConfig
 	DB         *DBConfig
+    DEV_DB *Local_DBConfig
+	AUTH       *AuthConfig
+}
+
+type AuthConfig struct {
+    Token apiToken
+    Admin adminConfig
+}
+
+type adminConfig struct {
+    Username string
+    Password string
+}
+
+type apiToken struct {
+    Secret string
+    Exp time.Duration
+    Iss string
 }
 
 type ServerConfig struct {
@@ -33,6 +51,14 @@ type DBConfig struct {
 	Password string
 }
 
+type Local_DBConfig struct {
+	Name     string
+	Host     string
+	Port     string
+	User     string
+	Password string
+}
+
 type MigrationConfig struct {
 	DIR string
 }
@@ -44,25 +70,55 @@ func initEnvs() *Config {
 
 	return &Config{
 		MIGRATIONS: &MigrationConfig{
-			DIR: getEnv("MIGRATION_DIR", "./cmd/migrates/migrations/"),
+			DIR: getEnv("MIGRATION_DIR"),
 		},
 		SERVER: &ServerConfig{
-			Port:         getEnv("SERVER_PORT", "8080"),
+			Port:         getEnv("SERVER_PORT"),
 			ReadTimeout:  getEnvAsTime("SERVER_TIMEOUT_READ", 5*time.Second),
 			WriteTimeout: getEnvAsTime("SERVER_TIMEOUT_WRITE", 10*time.Second),
 			IdleTimeout:  getEnvAsTime("SERVER_TIMEOUT_IDLE", 15*time.Second),
 		},
 		DB: &DBConfig{
-			Name:     getEnv("DB_NAME", "traverse_db"),
-			Host:     getEnv("DB_HOST", "127.0.0.1"),
-			Port:     getEnv("DB_PORT", "8080"),
-			User:     getEnv("DB_USER", "root"),
-			Password: getEnv("DB_PASSWORD", "sendhelp"),
+			Name:     getEnv("DB_NAME"),
+			Host:     getEnv("DB_HOST"),
+			Port:     getEnv("DB_PORT"),
+			User:     getEnv("DB_USER"),
+			Password: getEnv("DB_PASSWORD"),
 		},
+		DEV_DB: &Local_DBConfig{
+			Name:     getEnv("LOCAL_DB_NAME"),
+			Host:     getEnv("LOCAL_DB_HOST"),
+			Port:     getEnv("LOCAL_DB_PORT"),
+			User:     getEnv("LOCAL_DB_USER"),
+			Password: getEnv("LOCAL_DB_PASSWORD"),
+		},
+        AUTH: &AuthConfig{
+            Token: apiToken{
+                Secret: getEnv("AUTH_API_KEY"),
+                Exp: getEnvAsTime("AUTH_EXP_TIME", 24 * time.Hour),
+                Iss: getEnv("AUTH_ISS"),
+            },
+            Admin: adminConfig{
+                Username: getEnv("AUTH_ADMIN_USER"),
+                Password: getEnv("AUTH_ADMIN_PASS"),
+            },
+        },
 	}
 }
 
 func (c *DBConfig) String() string {
+	return fmt.Sprintf(
+		"host=%s user=%s password=%s dbname=%s port=%s",
+		c.Host,
+		c.User,
+		c.Password,
+		c.Name,
+		c.Port,
+	)
+}
+
+// local dev testing
+func (c *Local_DBConfig) String() string {
 	return fmt.Sprintf(
 		"host=%s user=%s password=%s dbname=%s port=%s",
 		c.Host,

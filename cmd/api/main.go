@@ -2,34 +2,46 @@ package main
 
 import (
 	"context"
-	"fmt"
-	"log"
-	"traverse/configs"
-	"traverse/internal/db"
-	"traverse/internal/routes"
-	"traverse/internal/server"
+
+	"github.com/minguyentt/traverse/configs"
+	server "github.com/minguyentt/traverse/internal/api"
+	"github.com/minguyentt/traverse/internal/db"
+	"github.com/minguyentt/traverse/internal/handlers"
+	"github.com/minguyentt/traverse/internal/middlewares"
+	"github.com/minguyentt/traverse/internal/router"
+	"github.com/minguyentt/traverse/internal/services"
+	"github.com/minguyentt/traverse/internal/storage"
+	"github.com/minguyentt/traverse/internal/zlogger"
 )
 
 func main() {
-	serverCtx := context.Background()
-	poolCtx := context.Background()
+	ctx := context.Background()
 
-	router := routes.NewRouter()
+	l := zlogger.NewLogger()
+	dbLogger := l.WithArea("db connection")
+	apiLogger := l.WithArea("api server")
+	defer l.Sync()
 
 	cfg := configs.ENVS
-	pool, err := db.PoolWithConfig(poolCtx, cfg.DB.String())
+	db, err := db.NewPoolConn(ctx, cfg.DEV_DB.String(), dbLogger)
 	if err != nil {
-		log.Fatalf("server pool error: %v", err)
+		l.Fatalf("server pool error: %v", err)
 	}
 
-	dsn := pool.Pool().Config()
-	fmt.Println(dsn.ConnConfig.ConnString())
+	defer db.Close()
 
-	defer pool.Close()
+	storage := storage.NewStorage(db)
+	service := services.NewServices(storage)
+	handlers := handlers.NewHandlers(service)
 
-	server := server.NewApiServer(serverCtx, pool, cfg, router)
-	err = server.Run()
+	mw := middlewares.New(apiLogger)
+	r := router.New(mw)
+
+	mux := r.Mount(handlers)
+
+	api := server.NewServer(ctx, db, cfg, mux, apiLogger)
+	err = api.Run()
 	if err != nil {
-		log.Fatalf("server error: %v", err)
+		l.Fatalf("server error: %v", err)
 	}
 }

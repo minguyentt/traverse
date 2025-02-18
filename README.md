@@ -28,8 +28,30 @@
     RegionCode => `json: "region_code"`
 }
 
+## API flow requests
+Handlers => Services => Storage => DB
 
-[TODO]
-* implement models & DTOs
-* setup docker & postgresql
+Things to consider:
+- authentication
+- authorization
+- middlewares
+- rate limiting
+
+[NOTES]
+- any data being inserted into the db should already be validated from the business logic before executing
+- app layer => business/domain/internal/... layer => database storage layer
+- id SERIAL PRIMARY KEY, => for auto incrementals when generating user ids
+
+* JWT AUTHENTICATOR
+    - we have the admin auth config token settings
+    - then we have tokens for sub claims from users
+
+- implement and design seeds for "mock" testing
+- remove the default fallbacks from the cfg envs #NOTE potential full scale project
+- adapter pattern for business logic and database interactions
+
+[FIX]
+
+- implement a build stage
+- running issues with implementing migrations during runtime lol
 

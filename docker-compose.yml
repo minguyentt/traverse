@@ -1,21 +1,26 @@
 services:
-  app:
-    build: .
-    container_name: traverse-app
-    environment:
-      - DB_HOST=${DB_HOST}
-      - DB_NAME=${DB_NAME}
-      - DB_PORT=${DB_PORT}
-      - DB_USER=${DB_USER}
-      - DB_PASSWORD=${DB_PASSWORD}
-    ports:
-      - "8080:8080"
-    depends_on:
-      - postgres_db
+  # api:
+  #   build:
+  #     context: .
+  #     dockerfile: Dockerfile
+  #   container_name: traverse-api
+  #   volumes:
+  #     - ./:/app
+  #   environment:
+  #     - DB_HOST=${DB_HOST}
+  #     - DB_NAME=${DB_NAME}
+  #     - DB_PORT=${DB_PORT}
+  #     - DB_USER=${DB_USER}
+  #     - DB_PASSWORD=${DB_PASSWORD}
+  #   ports:
+  #     - "8080:8080"
+  #   depends_on:
+  #     postgres_db:
+  #       condition: service_healthy
 
   postgres_db:
     image: postgres
-    container_name: traverse-db
+    container_name: traverse_db
     environment:
       - POSTGRES_DB=${DB_NAME}
       - POSTGRES_PORT=${DB_PORT}
@@ -25,6 +30,12 @@ services:
       - "5432:5432"
     volumes:
       - pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
 volumes:
   pg_data:
+
