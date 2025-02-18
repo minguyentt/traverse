@@ -13,9 +13,9 @@ type Router struct {
 	middlewares *mw.Middlewares
 }
 
-func NewRouter(r *chi.Mux, middlewares *mw.Middlewares) *Router {
+func New(middlewares *mw.Middlewares) *Router {
 	return &Router{
-        mux: r,
+        mux: chi.NewRouter(),
         middlewares: middlewares,
     }
 }

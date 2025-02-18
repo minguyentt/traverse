@@ -3,9 +3,8 @@ package main
 import (
 	"context"
 
-	"github.com/go-chi/chi/v5"
 	"github.com/minguyentt/traverse/configs"
-	"github.com/minguyentt/traverse/internal/api"
+	server "github.com/minguyentt/traverse/internal/api"
 	"github.com/minguyentt/traverse/internal/db"
 	"github.com/minguyentt/traverse/internal/handlers"
 	"github.com/minguyentt/traverse/internal/middlewares"
@@ -35,9 +34,8 @@ func main() {
 	service := services.NewServices(storage)
 	handlers := handlers.NewHandlers(service)
 
-	mwl := middlewares.NewMiddlewareLogger(apiLogger)
-	r := router.NewRouter(chi.NewRouter())
-	r.WithMiddlewares(mwl)
+	mw := middlewares.New(apiLogger)
+	r := router.New(mw)
 
 	mux := r.Mount(handlers)
 
