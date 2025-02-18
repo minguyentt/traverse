@@ -8,9 +8,7 @@ CREATE TABLE IF NOT EXISTS users
     username VARCHAR(100) UNIQUE NOT NULL,
     password TEXT NOT NULL,
     email citext UNIQUE NOT NULL,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMPTZ NOT NULL,
-    deleted_at TIMESTAMPTZ NULL
+    created_at TIMESTAMP(0) NOT NULL DEFAULT NOW()
 );
 
 -- +goose Down

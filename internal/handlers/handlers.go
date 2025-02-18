@@ -1,22 +1,17 @@
 package handlers
 
 import (
-	"context"
-	"traverse/internal/handlers/users"
+	"github.com/minguyentt/traverse/internal/services"
 )
 
-// holds all the HTTP handlers
-type APIHandlers struct {
-	Ctx   context.Context
-	Users users.UsersHandler
+type Handlers struct {
+	UsersHandler
+	HealthHandler
 }
 
-// TODO: will need a struct to hold all the dependency injections
-// db
-// cache
-
-func NewHandlers() *APIHandlers {
-	return &APIHandlers{
-		Users: users.NewUsersHandler(),
+func NewHandlers(service *services.Service) *Handlers {
+	return &Handlers{
+        &usershandler{service.Users},
+        &healthHandler{},
 	}
 }
