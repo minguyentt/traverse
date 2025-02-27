@@ -2,46 +2,51 @@ package main
 
 import (
 	"context"
+	"log/slog"
+	"traverse/api/handlers"
+	"traverse/api/router"
+	"traverse/configs"
+	"traverse/internal/assert"
+	"traverse/internal/auth"
+	"traverse/internal/db"
+	"traverse/internal/services"
+	"traverse/internal/storage"
 
-	"github.com/minguyentt/traverse/configs"
-	server "github.com/minguyentt/traverse/internal/api"
-	"github.com/minguyentt/traverse/internal/db"
-	"github.com/minguyentt/traverse/internal/handlers"
-	"github.com/minguyentt/traverse/internal/middlewares"
-	"github.com/minguyentt/traverse/internal/router"
-	"github.com/minguyentt/traverse/internal/services"
-	"github.com/minguyentt/traverse/internal/storage"
-	"github.com/minguyentt/traverse/internal/zlogger"
+	server "traverse/api"
 )
 
 func main() {
 	ctx := context.Background()
 
-	l := zlogger.NewLogger()
-	dbLogger := l.WithArea("db connection")
-	apiLogger := l.WithArea("api server")
-	defer l.Sync()
+	// loading configs
+	cfg := configs.Env
 
-	cfg := configs.ENVS
+	// setup loggers
+	logger := slog.Default()
+	dbLogger := logger.With("area", "database pool connections")
+	sl := logger.With("area", "API Server")
+
+	// setting up pool connections for db
 	db, err := db.NewPoolConn(ctx, cfg.DEV_DB.String(), dbLogger)
-	if err != nil {
-		l.Fatalf("server pool error: %v", err)
-	}
-
+	assert.NoError(err, "pool conn error", "msg", err)
 	defer db.Close()
 
+    // jwt setup
+	jwt := auth.NewJWTAuth(cfg.AUTH.Token.Secret, cfg.AUTH.Token.Aud, cfg.AUTH.Token.Iss)
+
+	// routes
+	router := router.New()
 	storage := storage.NewStorage(db)
-	service := services.NewServices(storage)
+	service := services.NewServices(storage, jwt)
 	handlers := handlers.NewHandlers(service)
 
-	mw := middlewares.New(apiLogger)
-	r := router.New(mw)
+	server := server.NewServer(db, cfg, sl)
+	api, err := server.SetupAPI(ctx, server, router, handlers, service, storage)
+	assert.NoError(err, "error setting up api routes", "err", err)
 
-	mux := r.Mount(handlers)
-
-	api := server.NewServer(ctx, db, cfg, mux, apiLogger)
 	err = api.Run()
-	if err != nil {
-		l.Fatalf("server error: %v", err)
-	}
+	assert.NoError(err, "api configuration error", "err", err)
+	assert.NoError(err, "server error from starting", "msg", err)
+
+	server.MonitorMetrics()
 }

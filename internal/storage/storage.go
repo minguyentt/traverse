@@ -2,17 +2,26 @@ package storage
 
 import (
 	"context"
+	"errors"
 	"time"
 
-	"github.com/minguyentt/traverse/internal/db"
-	"github.com/minguyentt/traverse/internal/models"
+	"traverse/internal/db"
+	"traverse/api/models"
 
 	"github.com/jackc/pgx/v5"
 )
 
+var (
+    ErrNotFound = errors.New("no resource found")
+    ErrDuplicates = errors.New("found existing resource")
+    ErrDuplicateUsername = errors.New("existing duplicate key for username")
+)
+
 type Storage struct {
 	Users interface {
-		CreateUser(ctx context.Context, user *models.User, token string, exp time.Duration) error
+		CreateUser(ctx context.Context, user *models.User) error
+        UserTokenEntry(ctx context.Context, user_id int64, token string, exp time.Duration) error
+        Retrieve(ctx context.Context, username string) (*models.User, error)
 		UserByID(ctx context.Context, userID int64) (*models.User, error)
 		SetActive(ctx context.Context, token string) error
 		DeleteUser(context.Context, int64) error

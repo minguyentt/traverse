@@ -1,15 +1,18 @@
 package services
 
 import (
-	"github.com/minguyentt/traverse/internal/storage"
+	"traverse/internal/auth"
+	"traverse/internal/storage"
 )
 
 type Service struct {
 	Users *UserService
+    Activate *ActivateService
 }
 
-func NewServices(storage *storage.Storage) *Service {
+func NewServices(storage *storage.Storage, auth auth.Authenticator) *Service {
 	return &Service{
-		Users: NewUserService(storage),
+		Users: NewUserService(storage, auth),
+        Activate: NewActivationService(storage),
 	}
 }

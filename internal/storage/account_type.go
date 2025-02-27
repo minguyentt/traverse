@@ -6,8 +6,8 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	"github.com/minguyentt/traverse/internal/models"
-    "github.com/minguyentt/traverse/internal/db"
+	"traverse/api/models"
+    "traverse/internal/db"
 )
 
 type AccountTypeStore struct {

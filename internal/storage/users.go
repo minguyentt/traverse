@@ -4,21 +4,13 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
-	"fmt"
+	"log/slog"
 	"time"
+	"traverse/internal/db"
+	"traverse/api/models"
 
 	"github.com/jackc/pgx/v5"
-
-	"github.com/minguyentt/traverse/internal/db"
-	"github.com/minguyentt/traverse/internal/models"
 )
-
-type UserTest struct {
-	ID        int64  `json:"id"`
-	Firstname string `json:"firstname"`
-	Username  string `json:"username"`
-	Email     string `json:"email"`
-}
 
 type UserStore struct {
 	db *db.PGDB
@@ -28,15 +20,9 @@ type UserStore struct {
 func (s *UserStore) CreateUser(
 	ctx context.Context,
 	user *models.User,
-	token string,
-	exp time.Duration,
 ) error {
 	outerTxErr := ExecTx(ctx, s.db, func(inner pgx.Tx) error {
 		if err := s.create(ctx, user, inner); err != nil {
-			return err
-		}
-
-		if err := s.createUserTokenEntry(ctx, user.ID, token, exp, inner); err != nil {
 			return err
 		}
 
@@ -50,6 +36,65 @@ func (s *UserStore) CreateUser(
 	return nil
 }
 
+// retrieve user by username
+func (s *UserStore) Retrieve(ctx context.Context, username string) (*models.User, error) {
+	q := `
+    SELECT id, username, password, email, created_at
+    FROM users
+    WHERE username = $1 AND is_active = true
+    RETURNING id
+    `
+
+	user := &models.User{}
+	err := s.db.QueryRow(ctx, q, username).
+		Scan(&user.ID, &user.Username, &user.Password, &user.Email, &user.CreatedAt)
+	if err != nil {
+		switch err {
+		case pgx.ErrNoRows:
+			return nil, ErrNotFound
+		default:
+			return nil, err
+		}
+	}
+
+	return user, nil
+}
+
+func (s *UserStore) UserTokenEntry(
+    ctx context.Context,
+    user_id int64,
+    token string,
+    exp time.Duration,
+) error {
+    query := `
+    INSERT INTO user_tokens (user_id, token, exp)
+    VALUES ($1, $2, $3)
+    `
+
+    cmd, err := s.db.Exec(ctx, query, user_id, token, time.Now().Add(exp))
+    if err != nil {
+        return err
+    }
+    // TOOD: remove later
+    slog.Info("user token entry execution", "command", cmd.String())
+
+    return nil
+}
+
+func (s *UserStore) update(ctx context.Context, user *models.User, tx pgx.Tx) error {
+    query := `
+    UPDATE users SET firstname = $1, username = $2, email = $3, is_active $4
+    WHERE id = $5
+    `
+
+    _, err := tx.Exec(ctx, query, user.ID)
+    if err != nil {
+        return err
+    }
+
+    return nil
+}
+
 func (s *UserStore) UserByID(ctx context.Context, userID int64) (*models.User, error) {
 	query := `
     SELECT users.id, firstname, username, email, is_active, account_types.*, created_at
@@ -59,28 +104,30 @@ func (s *UserStore) UserByID(ctx context.Context, userID int64) (*models.User, e
     `
 
 	var user models.User
-    var timeStamp time.Time
+	var timeStamp time.Time
 
 	err := s.db.QueryRow(ctx, query, userID).
-        Scan(&user.ID,
-        &user.Firstname,
-        &user.Username,
-        &user.Email,
-        &user.IsActive,
-        &user.AccountType.ID,
-        &user.AccountType.AType,
-        &user.AccountType.Level,
-        &user.AccountType.Description,
-        &timeStamp)
+		Scan(&user.ID,
+			&user.Firstname,
+			&user.Username,
+			&user.Email,
+			&user.IsActive,
+			&user.AccountType.ID,
+			&user.AccountType.AType,
+			&user.AccountType.Level,
+			&user.AccountType.Description,
+			&timeStamp)
 	if err != nil {
-		if err == pgx.ErrNoRows {
-			return nil, fmt.Errorf("user not found: %w", err)
+		switch err {
+		case pgx.ErrNoRows:
+			return nil, ErrNotFound
+		default:
+			return nil, err
 		}
-		return nil, fmt.Errorf("unable to query user id: %w", err)
 	}
 
-    fmtStr := timeStamp.Format(time.RFC3339)
-    user.CreatedAt = fmtStr
+	fmtStr := timeStamp.Format(time.RFC3339)
+	user.CreatedAt = fmtStr
 
 	return &user, nil
 }
@@ -137,45 +184,17 @@ func (s *UserStore) create(ctx context.Context, user *models.User, tx pgx.Tx) er
 	err := tx.QueryRow(ctx, query, user.Username, user.Password, user.Email, accType).
 		Scan(&user.ID, &user.Username, &user.CreatedAt)
 	if err != nil {
-		return err
+		switch {
+		case err.Error() == `pq: duplicate key value violates unique constraint "users_username_key"`:
+			return ErrDuplicateUsername
+		default:
+			return err
+		}
 	}
 
 	return nil
 }
 
-func (s *UserStore) createUserTokenEntry(
-	ctx context.Context,
-	user_id int64,
-	token string,
-	exp time.Duration,
-	tx pgx.Tx,
-) error {
-	query := `
-    INSERT INTO user_tokens (user_id, token, exp)
-    VALUES ($1, $2, $3)
-    `
-
-	_, err := tx.Exec(ctx, query, user_id, token, time.Now().Add(exp))
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func (s *UserStore) update(ctx context.Context, user *models.User, tx pgx.Tx) error {
-	query := `
-    UPDATE users SET firstname = $1, username = $2, email = $3, is_active $4
-    WHERE id = $5
-    `
-
-	_, err := tx.Exec(ctx, query, user.ID)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
 
 func (s *UserStore) findUserWithToken(
 	ctx context.Context,
@@ -196,10 +215,12 @@ func (s *UserStore) findUserWithToken(
 	err := tx.QueryRow(ctx, que, encodedToken, time.Now()).
 		Scan(&user.ID, &user.Firstname, &user.Username, &user.Email, &user.CreatedAt, &user.CreatedAt)
 	if err != nil {
-		if err == pgx.ErrNoRows {
-			return nil, fmt.Errorf("user not found: %w", err)
+		switch err {
+		case pgx.ErrNoRows:
+			return nil, ErrNotFound
+		default:
+			return nil, err
 		}
-		return nil, fmt.Errorf("unable to query user id: %w", err)
 	}
 
 	return user, nil

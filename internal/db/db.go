@@ -3,18 +3,18 @@ package db
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"sync"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
-	"go.uber.org/zap"
 )
 
 // handle database connections with pool for concurrent queries
 
 type PGDB struct {
 	*pgxpool.Pool
-	logger *zap.SugaredLogger
+	logger *slog.Logger
 }
 
 var (
@@ -25,10 +25,9 @@ var (
 func NewPoolConn(
 	ctx context.Context,
 	connString string,
-	logger *zap.SugaredLogger,
+	logger *slog.Logger,
 ) (*PGDB, error) {
 	var err error
-	cpl := logger.Named("Connection Pool")
 	once.Do(func() {
 		cfg, parseErr := pgxpool.ParseConfig(connString)
 		if err != nil {
@@ -36,8 +35,9 @@ func NewPoolConn(
 			return
 		}
 
+		logger.Info("Attempting to connect to database pool...")
+
 		cfg.BeforeConnect = func(ctx context.Context, c *pgx.ConnConfig) error {
-			cpl.Info("Setting up new connection to the pool...")
 			c.RuntimeParams["application_name"] = "TraverseApp"
 
 			// set connection timeout?
@@ -51,8 +51,6 @@ func NewPoolConn(
 
 		// beforeAcquire hook
 		cfg.BeforeAcquire = func(ctx context.Context, conn *pgx.Conn) bool {
-			// try logger later too?
-
 			// current user_name connections
 			connInfo := conn.PgConn().ParameterStatus("session_authorization")
 
@@ -60,13 +58,13 @@ func NewPoolConn(
 
 			// handle not in transaction
 			if inTx := conn.PgConn().TxStatus() != 'I'; inTx {
-				cpl.Infow("Connection in transaction, unable to acquire", "user", connInfo)
+				logger.Info("Connection in transaction, unable to acquire", "user", connInfo)
 				return false
 			}
 			// ping database
 			err = conn.Ping(ctx)
 			if err != nil {
-				cpl.Error("connection failed to ping database", "error", err)
+				logger.Error("connection failed to ping database", "error", err)
 			}
 
 			return true
@@ -80,7 +78,7 @@ func NewPoolConn(
 
 		poolInstance = &PGDB{
 			pool,
-			cpl,
+			logger,
 		}
 	})
 

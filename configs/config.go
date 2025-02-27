@@ -2,11 +2,13 @@ package configs
 
 import (
 	"fmt"
+	"log"
 	"os"
 	"regexp"
 	"time"
 
 	"github.com/joho/godotenv"
+	"traverse/internal/assert"
 )
 
 const projectDir = "traverse" // change to project name directory
@@ -15,24 +17,25 @@ type Config struct {
 	MIGRATIONS *MigrationConfig
 	SERVER     *ServerConfig
 	DB         *DBConfig
-    DEV_DB *Local_DBConfig
+	DEV_DB     *Local_DBConfig
 	AUTH       *AuthConfig
 }
 
 type AuthConfig struct {
-    Token apiToken
-    Admin adminConfig
+	Token apiToken
+	Admin adminConfig
 }
 
 type adminConfig struct {
-    Username string
-    Password string
+	Username string
+	Password string
 }
 
 type apiToken struct {
-    Secret string
-    Exp time.Duration
-    Iss string
+	Secret string
+	Exp    time.Duration
+	Iss    string
+	Aud    string
 }
 
 type ServerConfig struct {
@@ -40,7 +43,7 @@ type ServerConfig struct {
 	ReadTimeout  time.Duration
 	WriteTimeout time.Duration
 	IdleTimeout  time.Duration
-	// Debug        bool
+	Debug        bool
 }
 
 type DBConfig struct {
@@ -63,10 +66,14 @@ type MigrationConfig struct {
 	DIR string
 }
 
-var ENVS = initEnvs()
+var Env = LoadEnvs()
 
-func initEnvs() *Config {
-	godotenv.Load()
+func LoadEnvs() *Config {
+	err := godotenv.Load()
+	if err != nil {
+		log.Fatalf("failed to load environment variables")
+	}
+	assert.NoError(err, "failed to load environment variables", "msg", err)
 
 	return &Config{
 		MIGRATIONS: &MigrationConfig{
@@ -92,17 +99,18 @@ func initEnvs() *Config {
 			User:     getEnv("LOCAL_DB_USER"),
 			Password: getEnv("LOCAL_DB_PASSWORD"),
 		},
-        AUTH: &AuthConfig{
-            Token: apiToken{
-                Secret: getEnv("AUTH_API_KEY"),
-                Exp: getEnvAsTime("AUTH_EXP_TIME", 24 * time.Hour),
-                Iss: getEnv("AUTH_ISS"),
-            },
-            Admin: adminConfig{
-                Username: getEnv("AUTH_ADMIN_USER"),
-                Password: getEnv("AUTH_ADMIN_PASS"),
-            },
-        },
+		AUTH: &AuthConfig{
+			Token: apiToken{
+				Secret: getEnv("AUTH_API_KEY"),
+				Exp:    getEnvAsTime("AUTH_EXP_TIME", 24*time.Hour),
+				Iss:    getEnv("AUTH_ISS"),
+				Aud:    getEnv("AUTH_AUD"),
+			},
+			Admin: adminConfig{
+				Username: getEnv("AUTH_ADMIN_USER"),
+				Password: getEnv("AUTH_ADMIN_PASS"),
+			},
+		},
 	}
 }
 

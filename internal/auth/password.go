@@ -2,16 +2,17 @@ package auth
 
 import "golang.org/x/crypto/bcrypt"
 
-type PasswordHash interface {
-	generateHash([]byte) error
-	compare([]byte) error
+type Password interface {
+	Hash([]byte) error
+	Compare([]byte) error
 }
+
 type password struct {
 	text *[]byte
 	hash []byte
 }
 
-func (p *password) generateHash(text []byte) error {
+func (p *password) Hash(text []byte) error {
 	hashed, err := bcrypt.GenerateFromPassword(text, bcrypt.DefaultCost)
 	if err != nil {
 		return err
@@ -23,6 +24,6 @@ func (p *password) generateHash(text []byte) error {
 	return nil
 }
 
-func (p *password) compare(input []byte) error {
+func (p *password) Compare(input []byte) error {
 	return bcrypt.CompareHashAndPassword(p.hash, input)
 }

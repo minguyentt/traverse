@@ -5,19 +5,20 @@ import (
 	"strconv"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/minguyentt/traverse/internal/errors"
-	"github.com/minguyentt/traverse/internal/services"
+	"traverse/api/errors"
+	"traverse/api/json"
+	"traverse/internal/services"
 )
 
 type UsersHandler interface {
 	UserByID(w http.ResponseWriter, r *http.Request)
 }
 
-type usershandler struct {
+type usersHandler struct {
 	service *services.UserService
 }
 
-func (h *usershandler) UserByID(w http.ResponseWriter, r *http.Request) {
+func (u *usersHandler) UserByID(w http.ResponseWriter, r *http.Request) {
 	userID, err := strconv.ParseInt(chi.URLParam(r, "userID"), 10, 64)
 	if err != nil {
 		// handle server error when failed to parse url
@@ -26,7 +27,7 @@ func (h *usershandler) UserByID(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// call the service layer
-	user, err := h.service.ByID(r.Context(), userID)
+	user, err := u.service.ByID(r.Context(), userID)
 	if err != nil {
 		// handle either internal server error AND no user found in DB
         errors.InternalServerErr(w, r, err)
@@ -34,7 +35,7 @@ func (h *usershandler) UserByID(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// respond with JSON for any errors that happened
-	if err := errors.JSONResponse(w, http.StatusOK, user); err != nil {
+	if err := json.Response(w, http.StatusOK, user); err != nil {
 		return
 	}
 }
