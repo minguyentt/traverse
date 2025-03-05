@@ -9,12 +9,12 @@ import (
 
 func InternalServerErr(w http.ResponseWriter, r *http.Request, err error) {
 	slog.Error(
-		"internal error",
-		"method",
+		"Internal server error",
+		"METHOD",
 		r.Method,
-		"path",
+		"PATH",
 		r.URL.Path,
-		"error",
+		"ERROR",
 		err.Error(),
 	)
 
@@ -22,14 +22,14 @@ func InternalServerErr(w http.ResponseWriter, r *http.Request, err error) {
 }
 
 func BadRequestResponse(w http.ResponseWriter, r *http.Request, err error) {
-	slog.Warn("bad HTTP request", "method", r.Method, "path", r.URL.Path, "error", err.Error())
+	slog.Warn("bad HTTP request", "METHOD", r.Method, "PATH", r.URL.Path, "ERROR", err.Error())
 
 	json.ErrResponse(w, http.StatusBadRequest, err.Error())
 }
 
 func NotFoundRequest(w http.ResponseWriter, r *http.Request, err error) {
 	slog.Error(
-		"not found request",
+		"Not found request encounter",
 		"method",
 		r.Method,
 		"path",
@@ -43,12 +43,12 @@ func NotFoundRequest(w http.ResponseWriter, r *http.Request, err error) {
 
 func UnauthorizedBasicErr(w http.ResponseWriter, r *http.Request, err error) {
 	slog.Warn(
-		"unauthorized basic auth error",
-		"method",
+		"Unauthorized basic auth error",
+		"METHOD",
 		r.Method,
-		"path",
+		"PATH",
 		r.URL.Path,
-		"error",
+		"ERROR",
 		err.Error(),
 	)
 
@@ -59,12 +59,12 @@ func UnauthorizedBasicErr(w http.ResponseWriter, r *http.Request, err error) {
 
 func UnauthorizedErr(w http.ResponseWriter, r *http.Request, err error) {
 	slog.Warn(
-		"unauthorized auth encounter",
-		"method",
+		"Unauthorized auth encounter",
+		"METHOD",
 		r.Method,
-		"path",
+		"PATH",
 		r.URL.Path,
-		"error",
+		"ERROR",
 		err.Error(),
 	)
 

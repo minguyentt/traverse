@@ -3,22 +3,26 @@ package handlers
 import (
 	"net/http"
 	"strconv"
-
-	"github.com/go-chi/chi/v5"
 	"traverse/api/errors"
 	"traverse/api/json"
 	"traverse/internal/services"
+
+	"github.com/go-chi/chi/v5"
 )
 
 type UsersHandler interface {
-	UserByID(w http.ResponseWriter, r *http.Request)
+	ByID(w http.ResponseWriter, r *http.Request)
 }
 
 type usersHandler struct {
-	service *services.UserService
+	service *services.Service
 }
 
-func (u *usersHandler) UserByID(w http.ResponseWriter, r *http.Request) {
+func NewUserHandler(services *services.Service) *usersHandler {
+    return &usersHandler{service: services}
+}
+
+func (h *usersHandler) ByID(w http.ResponseWriter, r *http.Request) {
 	userID, err := strconv.ParseInt(chi.URLParam(r, "userID"), 10, 64)
 	if err != nil {
 		// handle server error when failed to parse url
@@ -27,10 +31,10 @@ func (u *usersHandler) UserByID(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// call the service layer
-	user, err := u.service.ByID(r.Context(), userID)
+	user, err := h.service.Users.ByID(r.Context(), userID)
 	if err != nil {
 		// handle either internal server error AND no user found in DB
-        errors.InternalServerErr(w, r, err)
+		errors.InternalServerErr(w, r, err)
 		return
 	}
 

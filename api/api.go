@@ -12,14 +12,17 @@ import (
 	"runtime"
 	"syscall"
 	"time"
-
+	"traverse/api/handlers"
+	"traverse/api/json"
+	"traverse/api/router"
 	"traverse/configs"
+	"traverse/internal/assert"
 	"traverse/internal/auth"
 	"traverse/internal/db"
-	"traverse/api/handlers"
-	"traverse/api/router"
 	"traverse/internal/services"
 	"traverse/internal/storage"
+
+	"github.com/go-playground/validator/v10"
 )
 
 // api version control
@@ -32,47 +35,58 @@ type server struct {
 }
 
 type api struct {
+	*server
 	ctx      context.Context
 	mux      *router.Router
 	handlers *handlers.Handlers
 	service  *services.Service
 	storage  *storage.Storage
-	*server
+
+	jwt       auth.Authenticator
+	validator *validator.Validate
 }
 
 func NewServer(
-	db *db.PGDB,
 	cfg *configs.Config,
+	db *db.PGDB,
 	logger *slog.Logger,
 ) *server {
 	return &server{
-		db:     db,
 		cfg:    cfg,
+		db:     db,
 		logger: logger,
 	}
 }
 
-func (s *server) SetupAPI(
+func (s *server) SetupAPIV1(
 	ctx context.Context,
-	server *server,
 	router *router.Router,
-	handlers *handlers.Handlers,
-	service *services.Service,
-	storage *storage.Storage,
 ) (*api, error) {
+	jwtAuth := auth.NewJWTAuth(s.cfg.AUTH.Token.Secret, s.cfg.AUTH.Token.Aud, s.cfg.AUTH.Token.Iss)
+	validator := json.NewValidator()
+	storage := storage.NewStorage(s.db)
+	service := services.NewServices(storage, jwtAuth)
+	handlers := handlers.NewHandlers(service, validator)
+	assert.NotNil(handlers, "nil encounter")
+	assert.NotNil(service, "nil encounter")
+	assert.NotNil(storage, "nil encounter")
+
 	api := &api{
-		server:   server,
-		mux:      router,
-		handlers: handlers,
-		service:  service,
-		storage:  storage,
+		ctx:       ctx,
+		server:    s,
+		mux:       router,
+		handlers:  handlers,
+		service:   service,
+		storage:   storage,
+		jwt:       jwtAuth,
+		validator: validator,
 	}
 
 	return api, nil
 }
 
 func (api *api) Run() error {
-	mux := api.mount(api.handlers)
+	mux := api.mount()
 
 	if err := api.waitConnection(); err != nil {
 		return fmt.Errorf("database connection failed: %w", err)
@@ -101,6 +115,8 @@ func (api *api) Run() error {
 	}()
 
 	api.logger.Info("Server started listening on...", slog.String("addr", server.Addr))
+	api.logger.Info("API Ready. Waiting for requests...")
+
 	err := server.ListenAndServe()
 	if !errors.Is(err, http.ErrServerClosed) {
 		return err
@@ -135,7 +151,7 @@ func (api *api) waitConnection() error {
 	}
 }
 
-func (s *server) MonitorMetrics() {
+func (s *api) MonitorMetrics() {
 	expvar.NewString("version").Set(version)
 	expvar.Publish("database connection pooling", expvar.Func(func() any {
 		return s.db.Stat()

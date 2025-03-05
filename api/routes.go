@@ -4,16 +4,15 @@ import (
 	"expvar"
 	"net/http"
 	"time"
+	"traverse/configs"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/cors"
-	"traverse/configs"
-	"traverse/api/handlers"
 )
 
-func (api *api) mount(handlers *handlers.Handlers) http.Handler {
-	api.mux.Use(middleware.RequestID)
+func (api *api) mount() http.Handler {
+	// api.mux.Use(middleware.RequestID)
 	api.mux.Use(middleware.RealIP)
 	api.mux.Use(middleware.Logger)
 	api.mux.Use(middleware.Recoverer)
@@ -22,26 +21,29 @@ func (api *api) mount(handlers *handlers.Handlers) http.Handler {
 	api.mux.Use(middleware.Timeout(60 * time.Second))
 	// api.mux.Use(api.LoggerMiddleware)
 
-	api.mux.Route("/v1", func(home chi.Router) {
-        home.Route("/auth", func (auth chi.Router){
-            // POST => registration handler
-            // POST => token creation handler
+
+	api.mux.Route("/v1", func(r chi.Router) {
+        r.Route("/register", func(pub chi.Router) {
+            pub.Post("/user", api.handlers.Auth.RegisterUser)
         })
 
-        // admin use routes
-		home.Get("/health", handlers.HealthChecker)
-		home.With(api.BasicAuthMiddleware).Get("/debug/vars", expvar.Handler().ServeHTTP)
+		// login/registration
+		r.Route("/login", func(r chi.Router) {
+			r.Post("/auth", api.handlers.Auth.Login)
+		})
 
-		home.Route("/users", func(user chi.Router) {
-            user.Put("/activate/{token}", handlers.ActivateUser)
+		// admin use routes
+		r.Get("/health", api.handlers.HealthChecker)
+		r.With(api.BasicAuthMiddleware).Get("/debug/vars", expvar.Handler().ServeHTTP)
 
+		// users
+		r.Route("/users", func(user chi.Router) {
 			user.Route("/{userID}", func(r chi.Router) {
 				r.Use(api.TokenAuthMiddleware)
 
-				r.Get("/", handlers.UserByID)
+				r.Get("/", api.handlers.Users.ByID)
 			})
 		})
-
 	})
 
 	return api.mux

@@ -54,7 +54,7 @@ func (api *api) TokenAuthMiddleware(next http.Handler) http.Handler {
 // example:
 // basic Authentication string
 // "Basic QWxhZGRpbjpvcGVuIHNlc2FtZQ==" returns ("Aladdin", "open sesame", true).
-func (api *server) BasicAuthMiddleware(next http.Handler) http.Handler {
+func (api *api) BasicAuthMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		parts, err := parseAuthHeader(r, "Basic")
 		if err != nil {
@@ -84,7 +84,7 @@ func (api *server) BasicAuthMiddleware(next http.Handler) http.Handler {
 }
 
 // middleware logger
-func (api *server) LoggerMiddleware(next http.Handler) http.Handler {
+func (api *api) LoggerMiddleware(next http.Handler) http.Handler {
     return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
         start := time.Now()
         resOut := &response{w, http.StatusOK}
@@ -122,8 +122,8 @@ func parseAuthHeader(r *http.Request, authScheme string) (string, error) {
 }
 
 // validate the jwt token and returns mapped claims
-func (api *server) validateToken(token string) (jwt.MapClaims, error) {
-	valid, err := api.auth.Validate(token)
+func (api *api) validateToken(token string) (jwt.MapClaims, error) {
+	valid, err := api.jwt.Validate(token)
 	if err != nil {
 		return nil, fmt.Errorf("token validation failed: %w", err)
 	}

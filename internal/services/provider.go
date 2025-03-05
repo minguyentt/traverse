@@ -7,12 +7,10 @@ import (
 
 type Service struct {
 	Users *UserService
-    Activate *ActivateService
 }
 
 func NewServices(storage *storage.Storage, auth auth.Authenticator) *Service {
 	return &Service{
 		Users: NewUserService(storage, auth),
-        Activate: NewActivationService(storage),
 	}
 }

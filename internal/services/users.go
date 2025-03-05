@@ -2,25 +2,30 @@ package services
 
 import (
 	"context"
-	"traverse/api/models"
+	"log/slog"
+	"time"
+	cfg "traverse/configs"
 	"traverse/internal/auth"
 	"traverse/internal/storage"
+	"traverse/models"
+
+	"github.com/golang-jwt/jwt/v5"
 )
 
 type UserService struct {
-	store *storage.Storage
-    authenticate auth.Authenticator
+	store        *storage.Storage
+	authenticate auth.Authenticator
 }
 
 func NewUserService(store *storage.Storage, auth auth.Authenticator) *UserService {
 	return &UserService{
-		store: store,
-        authenticate: auth,
+		store:        store,
+		authenticate: auth,
 	}
 }
 
 func (s *UserService) GetUser(ctx context.Context, username string) (*models.User, error) {
-	user, err := s.store.Users.Retrieve(ctx, username)
+	user, err := s.store.Users.Find(ctx, username)
 	if err != nil {
 		return nil, err
 	}
@@ -37,7 +42,7 @@ func (s *UserService) ByID(ctx context.Context, userID int64) (*models.User, err
 	return user, nil
 }
 
-func (s *UserService) RegisterUser(
+func (s *UserService) Register(
 	ctx context.Context,
 	payload *models.RegistrationPayload,
 ) (*models.User, error) {
@@ -46,13 +51,10 @@ func (s *UserService) RegisterUser(
 		Firstname: payload.Firstname,
 		Username:  payload.Username,
 		Email:     payload.Email,
-		AccountType: models.AccountType{
-			AType: "user",
-		},
 	}
 
 	// hash the password
-	if err := user.Password.Hash([]byte(payload.Password)); err != nil {
+	if err := user.Password.Set([]byte(payload.Password)); err != nil {
 		return nil, err
 	}
 
@@ -64,32 +66,47 @@ func (s *UserService) RegisterUser(
 	return user, nil
 }
 
-func (s *UserService) UserTokenEntry(
+func (s *UserService) Login(
 	ctx context.Context,
 	payload *models.UserLoginPayload,
 ) (*models.UserToken, error) {
-    user, err := s.store.Users.Retrieve(ctx, payload.Username)
-    if err != nil {
-        return nil, err
-    }
+	user, err := s.store.Users.Find(ctx, payload.Username)
+	if err != nil {
+		return nil, err
+	}
+	slog.Info("user login obj", "out", user)
 
-    if err := user.Password.Compare([]byte(payload.Password)); err != nil {
-        return nil, err
-    }
+	if err := user.Password.Compare([]byte(payload.Password)); err != nil {
+		return nil, err
+	}
 
+	expiry := time.Now().Add(time.Hour * 24 * 3)
 
-    tokenStr, err := s.authenticate.CreateToken(user.ID, user.Username)
-    if err != nil {
-        return nil, err
-    }
+	claims := jwt.MapClaims{
+		"sub":      user.ID,
+		"username": user.Username,
+		"exp":      expiry, // 3 day exp
+		"iat":      time.Now().Unix(),
+		"nbf":      time.Now().Unix(),
+		"iss":      cfg.Env.AUTH.Token.Iss,
+		"aud":      cfg.Env.AUTH.Token.Aud,
+	}
 
-    userWithToken := &models.UserToken{
-        User: user,
-        Token: tokenStr,
-    }
+	// generate the token and get the token str
+	tokenStr, err := s.authenticate.GenerateToken(claims)
+	if err != nil {
+		return nil, err
+	}
 
-    //TODO: figure out when user is logged in. We need to create a token entry to the datbase...
-    // either during login validation or during middlewares...
+	// store the user token entry
+	if err := s.store.Users.CreateTokenEntry(ctx, user.ID, tokenStr, expiry.Sub(time.Now())); err != nil {
+		return nil, err
+	}
 
-    return userWithToken, nil
+	userWithToken := &models.UserToken{
+		User:  user,
+		Token: tokenStr,
+	}
+
+	return userWithToken, nil
 }

@@ -2,14 +2,12 @@ package auth
 
 import (
 	"fmt"
-	"time"
-	cfg "traverse/configs"
 
 	"github.com/golang-jwt/jwt/v5"
 )
 
 type Authenticator interface {
-	CreateToken(userID int64, username string) (string, error)
+	GenerateToken(claims jwt.MapClaims) (string, error)
 	Validate(token string) (*jwt.Token, error)
 }
 
@@ -27,17 +25,7 @@ func NewJWTAuth(key, aud, iss string) *authenticator {
 	}
 }
 
-func (auth *authenticator) CreateToken(userID int64, username string) (string, error) {
-	claims := jwt.MapClaims{
-		"sub": userID,
-        "username": username,
-		"exp": time.Now().Add(time.Hour * 24 * 3), // 3 day exp
-		"iat": time.Now().Unix(),
-		"nbf": time.Now().Unix(),
-		"iss": cfg.Env.AUTH.Token.Iss,
-		"aud": cfg.Env.AUTH.Token.Aud,
-	}
-
+func (auth *authenticator) GenerateToken(claims jwt.MapClaims) (string, error) {
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 
 	tokenStr, err := token.SignedString([]byte(auth.secretKey))

@@ -8,8 +8,6 @@ type User struct {
 	Username    string        `json:"username"`
 	Password    auth.Password `json:"-"`
 	Email       string        `json:"email"`
-	IsActive    bool          `json:"is_active"`
-	AccountType AccountType   `json:"account_type"`
 	CreatedAt   string        `json:"created_at"`
 }
 
@@ -37,9 +35,9 @@ type UserLoginPayload struct {
 	Password string `json:"password" validate:"required,min=6,max=128"`
 }
 
-type AccountType struct {
-	ID          int64  `json:"id"`
-	AType       string `json:"_type"`
-	Level       int    `json:"level"`
-	Description string `json:"description"`
-}
+// type AccountType struct {
+// 	ID          int64  `json:"id"`
+// 	AType       string `json:"_type"`
+// 	Level       int    `json:"level"`
+// 	Description string `json:"description"`
+// }

@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"traverse/internal/db"
-	"traverse/api/models"
+	"traverse/models"
 
 	"github.com/jackc/pgx/v5"
 )
@@ -20,21 +20,16 @@ var (
 type Storage struct {
 	Users interface {
 		CreateUser(ctx context.Context, user *models.User) error
-        UserTokenEntry(ctx context.Context, user_id int64, token string, exp time.Duration) error
-        Retrieve(ctx context.Context, username string) (*models.User, error)
+        CreateTokenEntry(ctx context.Context, user_id int64, token string, exp time.Duration) error
+        Find(ctx context.Context, username string) (*models.User, error)
 		UserByID(ctx context.Context, userID int64) (*models.User, error)
-		SetActive(ctx context.Context, token string) error
 		DeleteUser(context.Context, int64) error
-	}
-	AccountType interface {
-		AccountAlias(context.Context, string) (*models.AccountType, error)
 	}
 }
 
 func NewStorage(db *db.PGDB) *Storage {
 	return &Storage{
 		Users:       &UserStore{db},
-		AccountType: &AccountTypeStore{db},
 	}
 }
 

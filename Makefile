@@ -6,7 +6,7 @@ LOCAL_DSN=user=$(LOCAL_DB_USER) password=$(LOCAL_DB_PASSWORD) dbname=$(LOCAL_DB_
 MIGRATIONS_DIR = $(MIGRATION_DIR)
 
 # Phony targets
-.PHONY: migrate-up migrate-down migrate-create migrate-fix migrate-status migrate-reset
+.PHONY: migrate-up migrate-down migrate-create migrate-fix migrate-status migrate-reset migrate-validate
 
 run:
 	@go run ./cmd/api
@@ -28,4 +28,7 @@ migrate-reset:
 
 migrate-fix:
 	@goose -dir $(MIGRATIONS_DIR) $(DB_DRIVER) "$(LOCAL_DSN)" fix
+
+migrate-validate:
+	@goose -dir $(MIGRATIONS_DIR) $(DB_DRIVER) "$(LOCAL_DSN)" validate
 
