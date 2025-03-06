@@ -1,14 +1,16 @@
 package models
 
-import "traverse/internal/auth"
+import (
+	"traverse/internal/auth"
+)
 
 type User struct {
-	ID          int64         `json:"id"`
-	Firstname   string        `json:"firstname"`
-	Username    string        `json:"username"`
-	Password    auth.Password `json:"-"`
-	Email       string        `json:"email"`
-	CreatedAt   string        `json:"created_at"`
+	ID        int64         `json:"id"`
+	Firstname string        `json:"firstname"`
+	Username  string        `json:"username"`
+	Password  auth.Password `json:"-"`
+	Email     string        `json:"email"`
+	CreatedAt string        `json:"created_at"`
 }
 
 type RegistrationPayload struct {
@@ -19,7 +21,6 @@ type RegistrationPayload struct {
 }
 
 type UserToken struct {
-	*User
 	Token string `json:"token"`
 }
 

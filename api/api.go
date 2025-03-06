@@ -36,11 +36,11 @@ type server struct {
 
 type api struct {
 	*server
-	ctx      context.Context
-	mux      *router.Router
-	handlers *handlers.Handlers
-	service  *services.Service
-	storage  *storage.Storage
+	ctx     context.Context
+	mux     *router.Router
+	h       *handlers.Handlers
+	service *services.Service
+	storage *storage.Storage
 
 	jwt       auth.Authenticator
 	validator *validator.Validate
@@ -75,7 +75,7 @@ func (s *server) SetupAPIV1(
 		ctx:       ctx,
 		server:    s,
 		mux:       router,
-		handlers:  handlers,
+		h:         handlers,
 		service:   service,
 		storage:   storage,
 		jwt:       jwtAuth,

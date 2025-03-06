@@ -24,24 +24,26 @@ func (api *api) mount() http.Handler {
 
 	api.mux.Route("/v1", func(r chi.Router) {
         r.Route("/register", func(pub chi.Router) {
-            pub.Post("/user", api.handlers.Auth.RegisterUser)
+            pub.Post("/user", api.h.Auth.RegistrationHandler)
         })
 
 		// login/registration
 		r.Route("/login", func(r chi.Router) {
-			r.Post("/auth", api.handlers.Auth.Login)
+			r.Post("/", api.h.Auth.LoginHandler)
 		})
 
 		// admin use routes
-		r.Get("/health", api.handlers.HealthChecker)
+		r.Get("/health", api.h.HealthChecker)
 		r.With(api.BasicAuthMiddleware).Get("/debug/vars", expvar.Handler().ServeHTTP)
 
 		// users
 		r.Route("/users", func(user chi.Router) {
+            user.Put("/activate/{token}", api.h.Auth.ActivationHandler)
+
 			user.Route("/{userID}", func(r chi.Router) {
 				r.Use(api.TokenAuthMiddleware)
 
-				r.Get("/", api.handlers.Users.ByID)
+				r.Get("/", api.h.Users.UserByIDHandler)
 			})
 		})
 	})

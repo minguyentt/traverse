@@ -11,18 +11,18 @@ import (
 )
 
 type UsersHandler interface {
-	ByID(w http.ResponseWriter, r *http.Request)
+	UserByIDHandler(w http.ResponseWriter, r *http.Request)
 }
 
 type usersHandler struct {
-	service *services.Service
+	service services.UserService
 }
 
-func NewUserHandler(services *services.Service) *usersHandler {
+func NewUserHandler(services services.UserService) *usersHandler {
     return &usersHandler{service: services}
 }
 
-func (h *usersHandler) ByID(w http.ResponseWriter, r *http.Request) {
+func (h *usersHandler) UserByIDHandler(w http.ResponseWriter, r *http.Request) {
 	userID, err := strconv.ParseInt(chi.URLParam(r, "userID"), 10, 64)
 	if err != nil {
 		// handle server error when failed to parse url
@@ -31,7 +31,7 @@ func (h *usersHandler) ByID(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// call the service layer
-	user, err := h.service.Users.ByID(r.Context(), userID)
+	user, err := h.service.UserByID(r.Context(), userID)
 	if err != nil {
 		// handle either internal server error AND no user found in DB
 		errors.InternalServerErr(w, r, err)

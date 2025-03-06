@@ -2,7 +2,8 @@ package services
 
 import (
 	"context"
-	"log/slog"
+	"crypto/sha256"
+	"encoding/hex"
 	"time"
 	cfg "traverse/configs"
 	"traverse/internal/auth"
@@ -12,19 +13,29 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 )
 
-type UserService struct {
+type UserService interface {
+	GetUser(ctx context.Context, username string) (*models.User, error)
+	UserByID(ctx context.Context, userID int64) (*models.User, error)
+
+	RegisterUser(ctx context.Context, payload *models.RegistrationPayload) (*models.User, error)
+	LoginUser(ctx context.Context, payload *models.UserLoginPayload) (*models.UserToken, error)
+
+	ActivateUser(ctx context.Context, token string) error
+}
+
+type userService struct {
 	store        *storage.Storage
 	authenticate auth.Authenticator
 }
 
-func NewUserService(store *storage.Storage, auth auth.Authenticator) *UserService {
-	return &UserService{
+func NewUserService(store *storage.Storage, auth auth.Authenticator) *userService {
+	return &userService{
 		store:        store,
 		authenticate: auth,
 	}
 }
 
-func (s *UserService) GetUser(ctx context.Context, username string) (*models.User, error) {
+func (s *userService) GetUser(ctx context.Context, username string) (*models.User, error) {
 	user, err := s.store.Users.Find(ctx, username)
 	if err != nil {
 		return nil, err
@@ -33,8 +44,8 @@ func (s *UserService) GetUser(ctx context.Context, username string) (*models.Use
 	return user, nil
 }
 
-func (s *UserService) ByID(ctx context.Context, userID int64) (*models.User, error) {
-	user, err := s.store.Users.UserByID(ctx, userID)
+func (s *userService) UserByID(ctx context.Context, userID int64) (*models.User, error) {
+	user, err := s.store.Users.ByID(ctx, userID)
 	if err != nil {
 		return nil, err
 	}
@@ -42,7 +53,7 @@ func (s *UserService) ByID(ctx context.Context, userID int64) (*models.User, err
 	return user, nil
 }
 
-func (s *UserService) Register(
+func (s *userService) RegisterUser(
 	ctx context.Context,
 	payload *models.RegistrationPayload,
 ) (*models.User, error) {
@@ -66,7 +77,7 @@ func (s *UserService) Register(
 	return user, nil
 }
 
-func (s *UserService) Login(
+func (s *userService) LoginUser(
 	ctx context.Context,
 	payload *models.UserLoginPayload,
 ) (*models.UserToken, error) {
@@ -74,18 +85,17 @@ func (s *UserService) Login(
 	if err != nil {
 		return nil, err
 	}
-	slog.Info("user login obj", "out", user)
 
 	if err := user.Password.Compare([]byte(payload.Password)); err != nil {
 		return nil, err
 	}
 
-	expiry := time.Now().Add(time.Hour * 24 * 3)
+	expiry := time.Hour * 24 * 3
 
 	claims := jwt.MapClaims{
 		"sub":      user.ID,
 		"username": user.Username,
-		"exp":      expiry, // 3 day exp
+		"exp":      time.Now().Add(expiry).Unix(),
 		"iat":      time.Now().Unix(),
 		"nbf":      time.Now().Unix(),
 		"iss":      cfg.Env.AUTH.Token.Iss,
@@ -98,15 +108,25 @@ func (s *UserService) Login(
 		return nil, err
 	}
 
+	chksum := sha256.Sum256([]byte(tokenStr))
+	encodedToken := hex.EncodeToString(chksum[:])
+
 	// store the user token entry
-	if err := s.store.Users.CreateTokenEntry(ctx, user.ID, tokenStr, expiry.Sub(time.Now())); err != nil {
+	if err := s.store.Users.CreateTokenEntry(ctx, user.ID, encodedToken, expiry); err != nil {
 		return nil, err
 	}
 
-	userWithToken := &models.UserToken{
-		User:  user,
-		Token: tokenStr,
+	userToken := &models.UserToken{
+		Token:     tokenStr,
 	}
 
-	return userWithToken, nil
+	return userToken, nil
+}
+
+func (s *userService) ActivateUser(ctx context.Context, token string) error {
+	if err := s.store.Users.ActivateUserToken(ctx, token); err != nil {
+		return err
+	}
+
+	return nil
 }

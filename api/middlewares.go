@@ -4,13 +4,14 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"strings"
 	"time"
+	"traverse/api/errors"
+	"traverse/configs"
 
 	"github.com/golang-jwt/jwt/v5"
-	"traverse/configs"
-	"traverse/api/errors"
 )
 
 // response wrapper for log middleware
@@ -85,21 +86,21 @@ func (api *api) BasicAuthMiddleware(next http.Handler) http.Handler {
 
 // middleware logger
 func (api *api) LoggerMiddleware(next http.Handler) http.Handler {
-    return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-        start := time.Now()
-        resOut := &response{w, http.StatusOK}
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		start := time.Now()
+		resOut := &response{w, http.StatusOK}
 
-        next.ServeHTTP(resOut, r)
-        dur := time.Since(start)
-        api.logger.Info("HTTP request",
-            "method", r.Method,
-            "path", r.URL.Path,
-            "status", resOut.code,
-            "duration", dur,
-            "ip", r.RemoteAddr,
-            "user_agent", r.UserAgent(),
-            )
-    })
+		next.ServeHTTP(resOut, r)
+		dur := time.Since(start)
+		api.logger.Info("HTTP request",
+			"method", r.Method,
+			"path", r.URL.Path,
+			"status", resOut.code,
+			"duration", dur,
+			"ip", r.RemoteAddr,
+			"user_agent", r.UserAgent(),
+		)
+	})
 }
 
 // TODO: need rate limiter?
@@ -137,6 +138,7 @@ func (api *api) validateToken(token string) (jwt.MapClaims, error) {
 }
 
 // extract user id from claims and fetch user from storage
+// TODO: fix this. i dont like it. why are we calling the storage here in the app layer?? the fuck.
 func (api *api) getUserFromClaims(
 	ctx context.Context,
 	claims jwt.MapClaims,
@@ -152,7 +154,7 @@ func (api *api) getUserFromClaims(
 		return nil, fmt.Errorf("invalid user ID format")
 	}
 
-	user, err := api.storage.Users.UserByID(ctx, int64(userID))
+	user, err := api.storage.Users.ByID(ctx, int64(userID))
 	if err != nil {
 		return nil, fmt.Errorf("user lookup failed: %w", err)
 	}

@@ -8,8 +8,11 @@ MIGRATIONS_DIR = $(MIGRATION_DIR)
 # Phony targets
 .PHONY: migrate-up migrate-down migrate-create migrate-fix migrate-status migrate-reset migrate-validate
 
-run:
-	@go run ./cmd/api
+build:
+	@go build -o traverse ./cmd/api
+
+run-api: build
+	@./traverse
 
 migrate-create:
 	@goose -dir $(MIGRATIONS_DIR) $(DB_DRIVER) "$(LOCAL_DSN)" create $(filter-out $@,$(MAKECMDGOALS)) sql
