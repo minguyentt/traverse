@@ -21,32 +21,50 @@ func (api *api) mount() http.Handler {
 	api.mux.Use(middleware.Timeout(60 * time.Second))
 	// api.mux.Use(api.LoggerMiddleware)
 
-
 	api.mux.Route("/v1", func(r chi.Router) {
-        r.Route("/register", func(pub chi.Router) {
-            pub.Post("/user", api.h.Auth.RegistrationHandler)
-        })
+		api.mountPublicRoutes(r)
+		api.mountUserRoutes(r)
 
-		// login/registration
-		r.Route("/login", func(r chi.Router) {
-			r.Post("/", api.h.Auth.LoginHandler)
-		})
-
-		// admin use routes
-		r.Get("/health", api.h.HealthChecker)
-		r.With(api.BasicAuthMiddleware).Get("/debug/vars", expvar.Handler().ServeHTTP)
-
-		// users
-		r.Route("/users", func(user chi.Router) {
-            user.Put("/activate/{token}", api.h.Auth.ActivationHandler)
-
-			user.Route("/{userID}", func(r chi.Router) {
-				r.Use(api.TokenAuthMiddleware)
-
-				r.Get("/", api.h.Users.UserByIDHandler)
-			})
-		})
+		api.mountAdminRoutes(r)
 	})
 
 	return api.mux
+}
+
+func (api *api) mountPublicRoutes(r chi.Router) {
+	r.Post("/register", api.handlers.RegistrationHandler)
+	r.Post("/login", api.handlers.LoginHandler)
+}
+
+func (api *api) mountUserRoutes(r chi.Router) {
+	r.Route("/user", func(user chi.Router) {
+		user.Group(func(g chi.Router) {
+			g.Put("/activate/{token}", api.handlers.ActivateUserHandler)
+		})
+
+		user.Route("/{userID}", func(sub chi.Router) {
+			sub.Use(api.TokenAuthMiddleware)
+			sub.Get("/", api.handlers.GetUserHandler)
+		})
+	})
+
+	// Admin Only routes
+	r.Group(func(admin chi.Router) {
+		admin.Route("/users", func(users chi.Router) {
+			users.Get("/", api.handlers.GetUsersHandler)
+		})
+	})
+}
+
+func (api *api) mountAdminRoutes(r chi.Router) {
+	r.Route("/system", func(sys chi.Router) {
+		sys.Get("/health", api.handlers.HealthChecker)
+
+		sys.Group(func(admin chi.Router) {
+			admin.Use(api.BasicAuthMiddleware)
+			// Or use JWT+role for better security in some cases:
+			// admin.Use(api.TokenAuthMiddleware, api.AdminOnly)
+			admin.Get("/debug/vars", expvar.Handler().ServeHTTP)
+		})
+	})
 }

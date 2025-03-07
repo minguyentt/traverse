@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
-	"log/slog"
 	"net/http"
 	"strings"
 	"time"
@@ -162,7 +161,7 @@ func (api *api) getUserFromClaims(
 	return user, nil
 }
 
-func (r *response) writeWriter(code int) {
-	r.code = code
-	r.ResponseWriter.WriteHeader(code)
-}
+// func (r *response) writeWriter(code int) {
+// 	r.code = code
+// 	r.ResponseWriter.WriteHeader(code)
+// }

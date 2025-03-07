@@ -2,6 +2,7 @@ package storage
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 	"time"
 	"traverse/internal/db"
@@ -13,13 +14,14 @@ import (
 type UserStorage interface {
 	// user creation and retrieval
 	CreateUser(ctx context.Context, user *models.User) error
+	FetchAll(ctx context.Context) ([]models.Users, error)
 	Find(ctx context.Context, username string) (*models.User, error)
 	ByID(ctx context.Context, userID int64) (*models.User, error)
-    FindByEmail(ctx context.Context, email string) (*models.User, error)
+	// FindByEmail(ctx context.Context, email string) (*models.User, error)
 
 	// token management
 	CreateTokenEntry(ctx context.Context, user_id int64, token string, exp time.Duration) error
-    ActivateUserToken(ctx context.Context, token string) error
+	ActivateUserToken(ctx context.Context, token string) error
 
 	DeleteUser(context.Context, int64) error
 }
@@ -30,6 +32,21 @@ type userStore struct {
 
 func NewUserStore(db *db.PGDB) *userStore {
 	return &userStore{db}
+}
+
+func (s *userStore) FetchAll(ctx context.Context) ([]models.Users, error) {
+	query := `
+    SELECT id, firstname, username, email, created_at
+    FROM users
+    `
+
+	rows, err := s.db.Query(ctx, query)
+	if err != nil {
+		return nil, fmt.Errorf("unable to scan row: %w", err)
+	}
+    defer rows.Close()
+
+    return pgx.CollectRows(rows, pgx.RowToStructByName[models.Users])
 }
 
 // executes db insertions to users & user_token tables
@@ -109,11 +126,10 @@ func (s *userStore) ByID(ctx context.Context, userID int64) (*models.User, error
 	return &user, nil
 }
 
-// TODO:
-func (s *userStore) FindByEmail(ctx context.Context, email string) (*models.User, error) {
-    return nil, nil
-}
-
+// TODO: setup email retrieval and email trap logic
+// func (s *userStore) FindByEmail(ctx context.Context, email string) (*models.User, error) {
+//     return nil, nil
+// }
 
 func (s *userStore) CreateTokenEntry(
 	ctx context.Context,
@@ -139,24 +155,23 @@ func (s *userStore) CreateTokenEntry(
 // 1. Retrieve user by finding the token it belongs to by ID
 // 2. clean up the user token after executed
 func (s *userStore) ActivateUserToken(ctx context.Context, token string) error {
-    return ExecTx(ctx, s.db, func(in pgx.Tx) error {
-        user, err := s.findUserWithToken(ctx, token, in)
-        if err != nil {
-            return err
-        }
+	return ExecTx(ctx, s.db, func(in pgx.Tx) error {
+		user, err := s.findUserWithToken(ctx, token, in)
+		if err != nil {
+			return err
+		}
 
-        if err := s.update(ctx, user, in); err != nil {
-            return err
-        }
+		if err := s.update(ctx, user, in); err != nil {
+			return err
+		}
 
-        if err := s.deleteUserToken(ctx, user.ID, in); err != nil {
-            return err
-        }
+		if err := s.deleteUserToken(ctx, user.ID, in); err != nil {
+			return err
+		}
 
-        return nil
-    })
+		return nil
+	})
 }
-
 
 func (s *userStore) DeleteUser(ctx context.Context, userID int64) error {
 	outer := ExecTx(ctx, s.db, func(inner pgx.Tx) error {
@@ -174,33 +189,33 @@ func (s *userStore) DeleteUser(ctx context.Context, userID int64) error {
 }
 
 func (s *userStore) findUserWithToken(
-    ctx context.Context,
-    token string,
-    tx pgx.Tx,
+	ctx context.Context,
+	token string,
+	tx pgx.Tx,
 ) (*models.User, error) {
-    que := `
+	que := `
     SELECT id, firstname, username, email, created_at
     FROM users
     JOIN user_tokens ut ON id = ut.user_id
     WHERE ut.token = $1 AND ut.expiry > $2
     `
 
-    var timestamp time.Time
-    user := &models.User{}
-    err := tx.QueryRow(ctx, que, token, time.Now()).
-        Scan(&user.ID, &user.Firstname, &user.Username, &user.Email, &timestamp)
-    if err != nil {
-        switch err {
-        case pgx.ErrNoRows:
-            return nil, ErrNotFound
-        default:
-            return nil, err
-        }
-    }
-    fmtStr := timestamp.Format(time.RFC3339)
-    user.CreatedAt = fmtStr
+	var timestamp time.Time
+	user := &models.User{}
+	err := tx.QueryRow(ctx, que, token, time.Now()).
+		Scan(&user.ID, &user.Firstname, &user.Username, &user.Email, &timestamp)
+	if err != nil {
+		switch err {
+		case pgx.ErrNoRows:
+			return nil, ErrNotFound
+		default:
+			return nil, err
+		}
+	}
+	fmtStr := timestamp.Format(time.RFC3339)
+	user.CreatedAt = fmtStr
 
-    return user, nil
+	return user, nil
 }
 
 func (s *userStore) create(ctx context.Context, user *models.User, tx pgx.Tx) error {
@@ -259,17 +274,17 @@ func (s *userStore) delete(ctx context.Context, userID int64, tx pgx.Tx) error {
 
 // use this to clean up tokens to avoid dupes
 func (s *userStore) deleteUserToken(ctx context.Context, user_id int64, tx pgx.Tx) error {
-    q := `
+	q := `
     DELETE FROM user_tokens
     WHERE user_id = $1
     `
 
-    cmd, err := tx.Exec(ctx, q, user_id)
-    if err != nil {
-        return err
-    }
+	cmd, err := tx.Exec(ctx, q, user_id)
+	if err != nil {
+		return err
+	}
 
 	slog.Info("deleted user token", "output", cmd.String())
 
-    return nil
+	return nil
 }

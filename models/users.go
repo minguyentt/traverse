@@ -1,6 +1,7 @@
 package models
 
 import (
+	"time"
 	"traverse/internal/auth"
 )
 
@@ -11,6 +12,14 @@ type User struct {
 	Password  auth.Password `json:"-"`
 	Email     string        `json:"email"`
 	CreatedAt string        `json:"created_at"`
+}
+
+type Users struct {
+	ID        int64     `json:"id"`
+	Firstname string    `json:"firstname"`
+	Username  string    `json:"username"`
+	Email     string    `json:"email"`
+	CreatedAt time.Time `json:"created_at"`
 }
 
 type RegistrationPayload struct {
