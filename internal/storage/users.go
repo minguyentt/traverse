@@ -14,7 +14,7 @@ import (
 type UserStorage interface {
 	// user creation and retrieval
 	CreateUser(ctx context.Context, user *models.User) error
-	FetchAll(ctx context.Context) ([]models.Users, error)
+	FetchAll(ctx context.Context) ([]models.User, error)
 	Find(ctx context.Context, username string) (*models.User, error)
 	ByID(ctx context.Context, userID int64) (*models.User, error)
 	// FindByEmail(ctx context.Context, email string) (*models.User, error)
@@ -34,7 +34,7 @@ func NewUserStore(db *db.PGDB) *userStore {
 	return &userStore{db}
 }
 
-func (s *userStore) FetchAll(ctx context.Context) ([]models.Users, error) {
+func (s *userStore) FetchAll(ctx context.Context) ([]models.User, error) {
 	query := `
     SELECT id, firstname, username, email, created_at
     FROM users
@@ -42,11 +42,21 @@ func (s *userStore) FetchAll(ctx context.Context) ([]models.Users, error) {
 
 	rows, err := s.db.Query(ctx, query)
 	if err != nil {
-		return nil, fmt.Errorf("unable to scan row: %w", err)
+		return nil, fmt.Errorf("unable to query row: %w", err)
 	}
     defer rows.Close()
 
-    return pgx.CollectRows(rows, pgx.RowToStructByName[models.Users])
+    var users []models.User
+    for rows.Next() {
+        var user models.User
+        err := rows.Scan(&user.ID, &user.Firstname, &user.Username, &user.Email, &user.CreatedAt)
+        if err != nil {
+            return nil, fmt.Errorf("unable to scan row: %w", err)
+        }
+        users = append(users, user)
+    }
+
+    return users, nil
 }
 
 // executes db insertions to users & user_token tables
@@ -76,10 +86,10 @@ func (s *userStore) Find(ctx context.Context, username string) (*models.User, er
     WHERE username = $1
     `
 
-	var timeStamp time.Time
+	// var timeStamp time.Time
 	user := &models.User{}
 	err := s.db.QueryRow(ctx, q, username).
-		Scan(&user.ID, &user.Username, &user.Password.Hash, &user.Email, &timeStamp)
+		Scan(&user.ID, &user.Username, &user.Password.Hash, &user.Email, &user.CreatedAt)
 	if err != nil {
 		switch err {
 		case pgx.ErrNoRows:
@@ -89,8 +99,8 @@ func (s *userStore) Find(ctx context.Context, username string) (*models.User, er
 		}
 	}
 
-	fmtStr := timeStamp.Format(time.RFC3339)
-	user.CreatedAt = fmtStr
+	// fmtStr := timeStamp.Format(time.RFC3339)
+	// user.CreatedAt = fmtStr
 
 	return user, nil
 }
@@ -103,14 +113,14 @@ func (s *userStore) ByID(ctx context.Context, userID int64) (*models.User, error
     `
 
 	var user models.User
-	var timeStamp time.Time
+	// var timeStamp time.Time
 
 	err := s.db.QueryRow(ctx, query, userID).
 		Scan(&user.ID,
 			&user.Firstname,
 			&user.Username,
 			&user.Email,
-			&timeStamp)
+			&user.CreatedAt)
 	if err != nil {
 		switch err {
 		case pgx.ErrNoRows:
@@ -120,8 +130,8 @@ func (s *userStore) ByID(ctx context.Context, userID int64) (*models.User, error
 		}
 	}
 
-	fmtStr := timeStamp.Format(time.RFC3339)
-	user.CreatedAt = fmtStr
+	// fmtStr := timeStamp.Format(time.RFC3339)
+	// user.CreatedAt = fmtStr
 
 	return &user, nil
 }
@@ -200,10 +210,10 @@ func (s *userStore) findUserWithToken(
     WHERE ut.token = $1 AND ut.expiry > $2
     `
 
-	var timestamp time.Time
+	// var timestamp time.Time
 	user := &models.User{}
 	err := tx.QueryRow(ctx, que, token, time.Now()).
-		Scan(&user.ID, &user.Firstname, &user.Username, &user.Email, &timestamp)
+		Scan(&user.ID, &user.Firstname, &user.Username, &user.Email, &user.CreatedAt)
 	if err != nil {
 		switch err {
 		case pgx.ErrNoRows:
@@ -212,8 +222,8 @@ func (s *userStore) findUserWithToken(
 			return nil, err
 		}
 	}
-	fmtStr := timestamp.Format(time.RFC3339)
-	user.CreatedAt = fmtStr
+	// fmtStr := timestamp.Format(time.RFC3339)
+	// user.CreatedAt = fmtStr
 
 	return user, nil
 }
@@ -225,9 +235,9 @@ func (s *userStore) create(ctx context.Context, user *models.User, tx pgx.Tx) er
     RETURNING id, created_at
     `
 
-	var timeStamp time.Time
+	// var timeStamp time.Time
 	err := tx.QueryRow(ctx, query, user.Firstname, user.Username, user.Password.Hash, user.Email).
-		Scan(&user.ID, &timeStamp)
+		Scan(&user.ID, &user.CreatedAt)
 	if err != nil {
 		switch {
 		case err.Error() == `pq: duplicate key value violates unique constraint "users_username_key"`:
@@ -237,8 +247,8 @@ func (s *userStore) create(ctx context.Context, user *models.User, tx pgx.Tx) er
 		}
 	}
 
-	fmt := timeStamp.Format(time.RFC3339)
-	user.CreatedAt = fmt
+	// fmt := timeStamp.Format(time.RFC3339)
+	// user.CreatedAt = fmt
 
 	return nil
 }
