@@ -14,6 +14,7 @@ import (
 )
 
 type UserService interface {
+    GetUsers(ctx context.Context) ([]models.Users, error)
 	GetUser(ctx context.Context, username string) (*models.User, error)
 	UserByID(ctx context.Context, userID int64) (*models.User, error)
 
@@ -33,6 +34,15 @@ func NewUserService(store *storage.Storage, auth auth.Authenticator) *userServic
 		store:        store,
 		authenticate: auth,
 	}
+}
+
+func (s *userService) GetUsers(ctx context.Context) ([]models.Users, error) {
+    users, err := s.store.Users.FetchAll(ctx)
+    if err != nil {
+        return nil, err
+    }
+
+    return users, nil
 }
 
 func (s *userService) GetUser(ctx context.Context, username string) (*models.User, error) {

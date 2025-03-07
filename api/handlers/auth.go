@@ -16,7 +16,7 @@ import (
 type AuthHandler interface {
 	RegistrationHandler(http.ResponseWriter, *http.Request)
 	LoginHandler(http.ResponseWriter, *http.Request)
-	ActivationHandler(http.ResponseWriter, *http.Request)
+	ActivateUserHandler(http.ResponseWriter, *http.Request)
 }
 
 type authHandler struct {
@@ -89,7 +89,7 @@ func (u *authHandler) LoginHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (a *authHandler) ActivationHandler(w http.ResponseWriter, r *http.Request) {
+func (a *authHandler) ActivateUserHandler(w http.ResponseWriter, r *http.Request) {
 	token := chi.URLParam(r, "token")
 	slog.Info("token", "out", token)
 

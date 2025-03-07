@@ -11,7 +11,8 @@ import (
 )
 
 type UsersHandler interface {
-	UserByIDHandler(w http.ResponseWriter, r *http.Request)
+	GetUserHandler(w http.ResponseWriter, r *http.Request)
+    GetUsersHandler(w http.ResponseWriter, r *http.Request)
 }
 
 type usersHandler struct {
@@ -22,7 +23,7 @@ func NewUserHandler(services services.UserService) *usersHandler {
     return &usersHandler{service: services}
 }
 
-func (h *usersHandler) UserByIDHandler(w http.ResponseWriter, r *http.Request) {
+func (h *usersHandler) GetUserHandler(w http.ResponseWriter, r *http.Request) {
 	userID, err := strconv.ParseInt(chi.URLParam(r, "userID"), 10, 64)
 	if err != nil {
 		// handle server error when failed to parse url
@@ -40,6 +41,20 @@ func (h *usersHandler) UserByIDHandler(w http.ResponseWriter, r *http.Request) {
 
 	// respond with JSON for any errors that happened
 	if err := json.Response(w, http.StatusOK, user); err != nil {
+        errors.InternalServerErr(w, r, err)
 		return
 	}
+}
+
+func (h *usersHandler) GetUsersHandler(w http.ResponseWriter, r *http.Request) {
+    users, err := h.service.GetUsers(r.Context())
+    if err != nil {
+		errors.BadRequestResponse(w, r, err)
+		return
+    }
+
+    if err := json.Response(w, http.StatusOK, users); err != nil {
+        errors.InternalServerErr(w, r, err)
+        return
+    }
 }
