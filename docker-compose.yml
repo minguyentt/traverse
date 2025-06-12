@@ -23,13 +23,13 @@ services:
     container_name: traverse_db
     environment:
       - POSTGRES_DB=${DB_NAME}
-      - POSTGRES_PORT=${DB_PORT}
+      # - POSTGRES_PORT=${DB_PORT}
       - POSTGRES_USER=${DB_USER}
       - POSTGRES_PASSWORD=${DB_PASSWORD}
     networks:
       - api-network
     ports:
-      - "5432:5432"
+      - "80:5432"
     volumes:
       - pg_data:/var/lib/postgresql/data
     healthcheck:
