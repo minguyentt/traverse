@@ -3,12 +3,15 @@ package storage
 import (
 	"context"
 	"errors"
+	"time"
 	"traverse/internal/db"
 
 	"github.com/jackc/pgx/v5"
 )
 
 var (
+	QueryTimeoutDuration = time.Second * 5
+
 	ErrNotFound          = errors.New("no resource found")
 	ErrDuplicates        = errors.New("found existing resource")
 	ErrDuplicateUsername = errors.New("existing duplicate key for username")
