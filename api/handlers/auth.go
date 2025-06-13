@@ -3,8 +3,7 @@ package handlers
 import (
 	"log/slog"
 	"net/http"
-	"traverse/api/errors"
-	"traverse/api/json"
+	"traverse/pkg/validator"
 	"traverse/internal/services"
 	"traverse/internal/storage"
 	"traverse/models"
@@ -78,7 +77,7 @@ func (u *authHandler) LoginHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-    user,err := u.service.LoginUser(r.Context(), &payload)
+	user, err := u.service.LoginUser(r.Context(), &payload)
 	if err != nil {
 		errors.UnauthorizedErr(w, r, err)
 		return

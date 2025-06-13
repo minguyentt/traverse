@@ -7,7 +7,7 @@ import (
 	"net/http"
 	"strings"
 	"time"
-	"traverse/api/errors"
+	"traverse/pkg/errors"
 	"traverse/configs"
 
 	"github.com/golang-jwt/jwt/v5"

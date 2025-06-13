@@ -4,7 +4,7 @@ import (
 	"log/slog"
 	"net/http"
 
-	"traverse/api/json"
+	"traverse/pkg/validator"
 )
 
 func InternalServerErr(w http.ResponseWriter, r *http.Request, err error) {

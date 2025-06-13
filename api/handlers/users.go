@@ -3,8 +3,8 @@ package handlers
 import (
 	"net/http"
 	"strconv"
-	"traverse/api/errors"
-	"traverse/api/json"
+	"traverse/pkg/errors"
+	"traverse/pkg/validator"
 	"traverse/internal/services"
 
 	"github.com/go-chi/chi/v5"

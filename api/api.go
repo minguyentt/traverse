@@ -13,7 +13,7 @@ import (
 	"syscall"
 	"time"
 	"traverse/api/handlers"
-	"traverse/api/json"
+	"traverse/pkg/validator"
 	"traverse/api/router"
 	"traverse/configs"
 	"traverse/internal/assert"
