@@ -14,12 +14,12 @@ import (
 func (api *api) mount() http.Handler {
 	// api.mux.Use(middleware.RequestID)
 	api.mux.Use(middleware.RealIP)
-	api.mux.Use(middleware.Logger)
+	// api.mux.Use(middleware.Logger)
+	api.mux.Use(api.LoggerMiddleware)
 	api.mux.Use(middleware.Recoverer)
 	api.mux.Use(cors.Handler(configs.WithCorsOpts()))
 
 	api.mux.Use(middleware.Timeout(60 * time.Second))
-	// api.mux.Use(api.LoggerMiddleware)
 
 	api.mux.Route("/v1", func(r chi.Router) {
 		api.mountPublicRoutes(r)

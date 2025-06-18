@@ -3,12 +3,16 @@ package main
 import (
 	"context"
 	"log/slog"
+	"os"
+	"time"
 	"traverse/api/router"
 	"traverse/configs"
 	"traverse/internal/assert"
 	"traverse/internal/db"
 
 	server "traverse/api"
+
+	"github.com/lmittmann/tint"
 )
 
 func main() {
@@ -17,8 +21,24 @@ func main() {
 	// loading configs
 	cfg := configs.Env
 
-	// setup loggers
-	logger := slog.Default()
+	//TODO: move logger configurations somewhere else later..
+	// currently writes all errors in red
+	logger := slog.New(tint.NewHandler(os.Stderr, nil))
+	slog.SetDefault(slog.New(
+		tint.NewHandler(os.Stderr, &tint.Options{
+			Level:      slog.LevelDebug,
+			TimeFormat: time.Kitchen,
+			ReplaceAttr: func(groups []string, a slog.Attr) slog.Attr {
+				if a.Value.Kind() == slog.KindAny {
+					if _, ok := a.Value.Any().(error); ok {
+						return tint.Attr(9, a)
+					}
+				}
+				return a
+			},
+		}),
+	))
+
 	dbLogger := logger.With("area", "database pool connections")
 	serverlogger := logger.With("area", "API Server")
 

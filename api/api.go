@@ -131,7 +131,7 @@ func (api *api) Run() error {
 }
 
 func (api *api) waitConnection() error {
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
 	// implement timer
@@ -146,7 +146,7 @@ func (api *api) waitConnection() error {
 				api.logger.Info("succesfully connected to database")
 				return nil
 			}
-			api.logger.Info("waiting for database connection...", "error", err)
+			api.logger.Warn("waiting for database connection...", "msg", err)
 		}
 	}
 }
