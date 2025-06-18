@@ -49,7 +49,7 @@ func main() {
 
 	router := router.New()
 
-	server := server.NewServer(cfg, db, serverlogger)
+	server := server.New(cfg, db, serverlogger)
 	assert.NoError(err, "error setting up api routes", "err", err)
 
 	v1API, err := server.SetupAPIV1(ctx, router)

@@ -18,7 +18,7 @@ type Handlers struct {
 }
 
 // TODO: i dont like this constructor for handlers
-func NewHandlers(service *services.Service, validator *validator.Validate) *Handlers {
+func New(service *services.Service, validator *validator.Validate) *Handlers {
 	return &Handlers{
 		NewHealthHandler(),
 		NewAuthHandler(service.Users, validator),

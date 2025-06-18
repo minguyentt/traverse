@@ -14,9 +14,9 @@ import (
 )
 
 type AuthHandler interface {
-	RegistrationHandler(http.ResponseWriter, *http.Request)
-	LoginHandler(http.ResponseWriter, *http.Request)
-	ActivateUserHandler(http.ResponseWriter, *http.Request)
+	Registration(http.ResponseWriter, *http.Request)
+	Login(http.ResponseWriter, *http.Request)
+	ActivateUser(http.ResponseWriter, *http.Request)
 }
 
 type authHandler struct {
@@ -31,7 +31,7 @@ func NewAuthHandler(s services.UserService, v *validator.Validate) *authHandler 
 	}
 }
 
-func (u *authHandler) RegistrationHandler(w http.ResponseWriter, r *http.Request) {
+func (u *authHandler) Registration(w http.ResponseWriter, r *http.Request) {
 	// Use RegistrationPayload json struct
 	var userPayload models.RegistrationPayload
 
@@ -67,7 +67,7 @@ func (u *authHandler) RegistrationHandler(w http.ResponseWriter, r *http.Request
 	}
 }
 
-func (u *authHandler) LoginHandler(w http.ResponseWriter, r *http.Request) {
+func (u *authHandler) Login(w http.ResponseWriter, r *http.Request) {
 	var payload models.UserLoginPayload
 	if err := json.Read(w, r, &payload); err != nil {
 		errors.BadRequestResponse(w, r, err)
@@ -91,7 +91,7 @@ func (u *authHandler) LoginHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (a *authHandler) ActivateUserHandler(w http.ResponseWriter, r *http.Request) {
+func (a *authHandler) ActivateUser(w http.ResponseWriter, r *http.Request) {
 	token := chi.URLParam(r, "token")
 	slog.Info("token", "out", token)
 

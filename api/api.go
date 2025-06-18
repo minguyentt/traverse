@@ -13,7 +13,6 @@ import (
 	"syscall"
 	"time"
 	"traverse/api/handlers"
-	"traverse/pkg/validator"
 	"traverse/api/router"
 	"traverse/configs"
 	"traverse/internal/assert"
@@ -21,6 +20,7 @@ import (
 	"traverse/internal/db"
 	"traverse/internal/services"
 	"traverse/internal/storage"
+	json "traverse/pkg/validator"
 
 	"github.com/go-playground/validator/v10"
 )
@@ -36,11 +36,11 @@ type server struct {
 
 type api struct {
 	*server
-	ctx      context.Context
-	mux      *router.Router
+	ctx     context.Context
+	mux     *router.Router
 	handler *handlers.Handlers
-	service  *services.Service
-	storage  *storage.Storage
+	service *services.Service
+	storage *storage.Storage
 
 	jwt       auth.Authenticator
 	validator *validator.Validate
@@ -64,9 +64,9 @@ func (s *server) SetupAPIV1(
 ) (*api, error) {
 	jwtAuth := auth.NewJWTAuth(s.cfg.AUTH.Token.Secret, s.cfg.AUTH.Token.Aud, s.cfg.AUTH.Token.Iss)
 	validator := json.NewValidator()
-	storage := storage.NewStorage(s.db)
-	service := services.NewServices(storage, jwtAuth)
-	handlers := handlers.NewHandlers(service, validator)
+	storage := storage.New(s.db)
+	service := services.New(storage, jwtAuth)
+	handlers := handlers.New(service, validator)
 	assert.NotNil(handlers, "nil encounter")
 	assert.NotNil(service, "nil encounter")
 	assert.NotNil(storage, "nil encounter")
@@ -75,7 +75,7 @@ func (s *server) SetupAPIV1(
 		ctx:       ctx,
 		server:    s,
 		mux:       router,
-		handler:  handlers,
+		handler:   handlers,
 		service:   service,
 		storage:   storage,
 		jwt:       jwtAuth,
