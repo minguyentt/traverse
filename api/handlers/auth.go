@@ -3,6 +3,7 @@ package handlers
 import (
 	"log/slog"
 	"net/http"
+	"traverse/pkg/errors"
 	"traverse/pkg/validator"
 	"traverse/internal/services"
 	"traverse/internal/storage"

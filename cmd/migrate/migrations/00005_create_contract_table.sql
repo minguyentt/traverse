@@ -2,7 +2,7 @@
 CREATE TABLE IF NOT EXISTS contracts
 (
     id bigserial PRIMARY KEY,
-    title text NOT NULL,
+    contract_name text NOT NULL,
     address text NOT NULL,
     city text NOT NULL,
     agency text NOT NULL,

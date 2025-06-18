@@ -3,19 +3,11 @@
 #### Models
 
 [TODO]
-- implement and design seeds for "mock" testing
 
- * Implement some real-time update socket to monitor database interactions
-    - query executions
-    - logs/errors
-    - tracers
-    - listen/notify
-
-- contracts feature
-- redis caching
-- add rate limiter
-- trace logging for dashboard monitoring
-- create good tests for building
+* System Designs for scaling backend api
+    - Ring hashing for redis cache => userid
+    - add database indexing for faster lookup performance => faster searches
+    - task/message queues for emails? unsure.
 
 [REMINDER]
 * For new features:

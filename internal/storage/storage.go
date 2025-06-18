@@ -19,11 +19,13 @@ var (
 
 type Storage struct {
 	Users UserStorage
+	Contracts ContractStorage
 }
 
 func NewStorage(db *db.PGDB) *Storage {
 	return &Storage{
 		Users: &userStore{db},
+		Contracts: &contractStore{db},
 	}
 }
 
