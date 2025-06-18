@@ -22,6 +22,10 @@ type contractStore struct {
 	db *db.PGDB
 }
 
+func NewContractStore(db *db.PGDB) *contractStore {
+	return &contractStore{db}
+}
+
 func (s *contractStore) Create(ctx context.Context, contract *models.Contract) error {
 	txError := ExecTx(ctx, s.db, func(innerTx pgx.Tx) error {
 		if err := s.create(ctx, contract, innerTx); err != nil {

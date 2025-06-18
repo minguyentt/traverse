@@ -22,10 +22,10 @@ type Storage struct {
 	Contracts ContractStorage
 }
 
-func NewStorage(db *db.PGDB) *Storage {
+func New(db *db.PGDB) *Storage {
 	return &Storage{
-		Users: &userStore{db},
-		Contracts: &contractStore{db},
+		Users: NewUserStore(db),
+		Contracts: NewContractStore(db),
 	}
 }
 

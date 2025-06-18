@@ -19,6 +19,6 @@ func main() {
 	assert.NoError(err, "pool conn error", "msg", err)
 	defer db.Close()
 
-	store := storage.NewStorage(db)
+	store := storage.New(db)
 	seed.Seed(store, db)
 }

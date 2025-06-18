@@ -2,7 +2,6 @@ package db
 
 import (
 	"context"
-	"fmt"
 	"log/slog"
 	"sync"
 
@@ -38,18 +37,28 @@ func NewPoolConn(
 		logger.Info("Attempting to connect to database pool...")
 
 		cfg.BeforeConnect = func(ctx context.Context, c *pgx.ConnConfig) error {
-			c.RuntimeParams["application_name"] = "TraverseApp"
+			//TODO: could be better than running the env vars in main
+			// 		have the pgx pool configured in here instead maybe?
 
-			// set connection timeout?
-
-			if c.Database == "" {
-				return fmt.Errorf("database name is required")
-			}
+				// Fetch credentials dynamically
+				// user, password, host, database, port, err := getCredentials()
+				// if err != nil {
+				// 	return err
+				// }
+				//
+				// // Update the connection config
+				// connConfig.User = user
+				// connConfig.Password = password
+				// connConfig.Host = host
+				// connConfig.Database = database
+				// connConfig.Port = port
+				//
+				// return nil
 
 			return nil
 		}
 
-		// beforeAcquire hook
+		//TODO: im not sure if i need this...
 		cfg.BeforeAcquire = func(ctx context.Context, conn *pgx.Conn) bool {
 			// current user_name connections
 			connInfo := conn.PgConn().ParameterStatus("session_authorization")
