@@ -10,8 +10,8 @@ import (
 )
 
 type ContractStorage interface {
-	Create(ctx context.Context, c *models.Contract) error
-	Update(ctx context.Context, c *models.Contract) error
+	Create(ctx context.Context, contract *models.Contract) error
+	Update(ctx context.Context, contract *models.Contract) error
 	Delete(ctx context.Context, cID int64) error
 
 	GetAllContracts(ctx context.Context, userID int64) ([]models.ContractMetaData, error)
@@ -22,44 +22,46 @@ type contractStore struct {
 	db *db.PGDB
 }
 
-func (s *contractStore) Create(ctx context.Context, c *models.Contract) error {
-	query := `
-	INSERT INTO contracts (contract_name, address, city, agency, user_id)
-	VALUES ($1, $2, $3, $4, $5)
-	RETURNING id, created_at, updated_at
-	`
-	ctx, cancel := context.WithTimeout(ctx, QueryTimeoutDuration)
-	defer cancel()
+func (s *contractStore) Create(ctx context.Context, contract *models.Contract) error {
+	txError := ExecTx(ctx, s.db, func(innerTx pgx.Tx) error {
+		if err := s.create(ctx, contract, innerTx); err != nil {
+			return err
+		}
 
-	err := s.db.QueryRow(ctx, query, c.ContractName, c.Address, c.City, c.Agency, c.UserID).
-		Scan(&c.ID, &c.CreatedAt, &c.UpdatedAt)
-	if err != nil {
-		return err
+		// set the foreign key before inserting job details
+		if contract.JobDetails != nil {
+			contract.JobDetails.ContractID = contract.ID
+
+			if err := s.insertJobDetailsWithContract(ctx, contract.JobDetails, innerTx); err != nil {
+				return err
+			}
+		}
+
+		return nil
+	})
+
+	if txError != nil {
+		return fmt.Errorf("error occurred during transaction: %w", txError)
 	}
 
 	return nil
 }
 
-func (s *contractStore) Update(ctx context.Context, c *models.Contract) error {
-	query := `
-	UPDATE contracts
-	SET contract_name = $1, address = $2, city = $3, agency = $4, version = version + 1
-	where id = $5 AND version = $6
-	RETURNING version
-	`
-
-	ctx, cancel := context.WithTimeout(ctx, QueryTimeoutDuration)
-	defer cancel()
-
-	err := s.db.QueryRow(ctx, query, c.ContractName, c.Address, c.City, c.Agency, c.ID).
-		Scan(&c.Version)
-	if err != nil {
-		switch err {
-		case pgx.ErrNoRows:
-			return ErrNotFound
-		default:
-			return err
+func (s *contractStore) Update(ctx context.Context, contract *models.Contract) error {
+	txErr := ExecTx(ctx, s.db, func(innerTx pgx.Tx) error {
+		if err := s.update(ctx, contract, innerTx); err != nil {
+			return fmt.Errorf("failed to update contract: %w", err)
 		}
+
+		if err := s.updateJobDetailWithContract(ctx, contract.JobDetails, innerTx); err != nil {
+			return fmt.Errorf("failed to upsert job details: %w", err)
+		}
+
+		return nil
+	})
+
+	if txErr != nil {
+		return fmt.Errorf("error occured during transaction: %w", txErr)
 	}
 
 	return nil
@@ -90,9 +92,9 @@ func (s *contractStore) Delete(ctx context.Context, cID int64) error {
 // retrieve contract by id
 func (s *contractStore) GetByID(ctx context.Context, cID int64) (*models.Contract, error) {
 	query := `
-	SELECT id, user_id, contract_name, address, city, agency, created_at, updated_at, version
-	FROM contracts
-	WHERE id = $1
+		SELECT id, user_id, job_title, city, agency, created_at, updated_at, version
+		FROM contracts
+		WHERE id = $1
 	`
 
 	ctx, cancel := context.WithTimeout(ctx, QueryTimeoutDuration)
@@ -103,7 +105,7 @@ func (s *contractStore) GetByID(ctx context.Context, cID int64) (*models.Contrac
 		ctx,
 		query,
 		cID,
-	).Scan(&c.ID, c.UserID, c.ContractName, c.Address, c.City, c.Agency, c.CreatedAt, c.UpdatedAt, c.Version)
+	).Scan(&c.ID, c.UserID, c.JobTitle, c.City, c.Agency, c.CreatedAt, c.UpdatedAt, c.Version)
 	if err != nil {
 		switch err {
 		case pgx.ErrNoRows:
@@ -111,6 +113,22 @@ func (s *contractStore) GetByID(ctx context.Context, cID int64) (*models.Contrac
 		default:
 			return nil, err
 		}
+	}
+
+	var cjd models.ContractJobDetails
+	query = `
+		SELECT contract_id, profession, assignment_length, experience
+		FROM contract_job_details
+		WHERE contract_id = $1
+	`
+	err = s.db.QueryRow(ctx, query, cID).
+		Scan(&cjd.ContractID, &cjd.Profession, &cjd.AssignmentLength, &cjd.Experience)
+	if err != nil && err != pgx.ErrNoRows {
+		return nil, fmt.Errorf("failed to get job details: %w", err)
+	}
+
+	if err != pgx.ErrNoRows {
+		c.JobDetails = &cjd
 	}
 
 	return &c, nil
@@ -127,7 +145,7 @@ func (s *contractStore) GetAllContracts(
 	// 3. left join the reviews table ON reviews.contract_id = contract.id
 	// 4. left join the users ON contract.user_id = user.id
 	query := `
-	SELECT con.id, con.user_id, con.contract_name, con.address, con.city, con.agency, u.username, con.version, con.created_at,
+	SELECT con.id, con.user_id, con.job_title, con.city, con.agency, u.username, con.version, con.created_at,
 	COUNT(r.id) AS reviews_count
 	FROM contracts c
 	LEFT JOIN reviews r ON r.contract_id = con.id
@@ -150,8 +168,7 @@ func (s *contractStore) GetAllContracts(
 		err := rows.Scan(
 			&c.ID,
 			&c.UserID,
-			&c.ContractName,
-			&c.Address,
+			&c.JobTitle,
 			&c.City,
 			&c.Agency,
 			&c.User.Username,
@@ -159,7 +176,6 @@ func (s *contractStore) GetAllContracts(
 			&c.CreatedAt,
 			&c.ReviewCounts,
 		)
-
 		if err != nil {
 			return nil, fmt.Errorf("error scanning contract row: %w", err)
 		}
@@ -172,4 +188,112 @@ func (s *contractStore) GetAllContracts(
 	}
 
 	return contracts, nil
+}
+
+func (s *contractStore) create(ctx context.Context, c *models.Contract, tx pgx.Tx) error {
+	query := `
+	INSERT INTO contracts (job_title, city, agency, user_id)
+	VALUES ($1, $2, $3, $4)
+	RETURNING id, job_title, city, agency, user_id, created_at, updated_at
+	`
+	ctx, cancel := context.WithTimeout(ctx, QueryTimeoutDuration)
+	defer cancel()
+
+	err := tx.QueryRow(ctx, query, c.JobTitle, c.City, c.Agency, c.UserID).
+		Scan(&c.ID, &c.JobTitle, &c.City, &c.Agency, &c.UserID, &c.CreatedAt, &c.UpdatedAt)
+	if err != nil {
+		return fmt.Errorf("failed to insert contract: %w", err)
+	}
+
+	return nil
+}
+
+func (s *contractStore) insertJobDetailsWithContract(
+	ctx context.Context,
+	cjd *models.ContractJobDetails,
+	tx pgx.Tx,
+) error {
+	query := `
+	INSERT INTO contract_job_details (contract_id, profession, assignment_length, experience)
+	VALUES ($1, $2, $3, $4)
+	RETURNING contract_id, profession, assignment_length, experience
+	`
+
+	ctx, cancel := context.WithTimeout(ctx, QueryTimeoutDuration)
+	defer cancel()
+
+	err := tx.QueryRow(
+		ctx,
+		query,
+		cjd.ContractID,
+		cjd.Profession,
+		cjd.AssignmentLength,
+		cjd.Experience,
+	).Scan(&cjd.ContractID, &cjd.Profession, &cjd.AssignmentLength, &cjd.Experience)
+	if err != nil {
+		return fmt.Errorf("failed to insert job details: %w", err)
+	}
+
+	return nil
+}
+
+func (s *contractStore) update(ctx context.Context, contract *models.Contract, tx pgx.Tx) error {
+	query := `
+	UPDATE contracts
+	SET job_title = $1, city = $2, agency = $3, version = version + 1
+	where id = $5 AND version = $6
+	RETURNING version
+	`
+
+	ctx, cancel := context.WithTimeout(ctx, QueryTimeoutDuration)
+	defer cancel()
+
+	err := tx.QueryRow(ctx, query, contract.JobTitle, contract.City, contract.Agency, contract.ID).
+		Scan(&contract.Version)
+	if err != nil {
+		switch err {
+		case pgx.ErrNoRows:
+			return ErrNotFound
+		default:
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (s *contractStore) updateJobDetailWithContract(
+	ctx context.Context,
+	cjd *models.ContractJobDetails,
+	tx pgx.Tx,
+) error {
+	/*
+		1. detect any conflicts on the contract_id column due to unqiue constraint
+		2. if a row is already inserted with an existing contract_id, trigger the conflict handler
+		3. DO UPDATE SET to perform an UPDATE on the existing row instead of throwing an error
+	*/
+	query := `
+        INSERT INTO contract_job_details (contract_id, profession, assignment_length, experience)
+        VALUES ($1, $2, $3, $4)
+        ON CONFLICT (contract_id)
+        DO UPDATE SET
+            profession = EXCLUDED.profession,
+            assignment_length = EXCLUDED.assignment_length,
+            experience = EXCLUDED.experience
+		RETURNING contract_id, profession, assignment_length, experience
+	`
+
+	err := tx.QueryRow(
+		ctx,
+		query,
+		cjd.ContractID,
+		cjd.Profession,
+		cjd.AssignmentLength,
+		cjd.Experience,
+	).Scan(&cjd.ContractID, &cjd.Profession, &cjd.AssignmentLength, &cjd.Experience)
+	if err != nil {
+		return fmt.Errorf("failed to upsert job details: %w", err)
+	}
+
+	return nil
 }

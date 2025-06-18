@@ -15,3 +15,13 @@
     2. Database queries
     3. service layer
     4. handler layer
+
+
+job_details
+- id
+- Profession => "registered nurse"
+- pay => ex. "$3,888 to $4000 weekly"
+- assignment_length => 13 weeks
+- certifications ? => ALCS, BLS, NRP
+- experience => "1 year"
+

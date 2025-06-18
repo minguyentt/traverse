@@ -7,8 +7,8 @@ import (
 	"net/http"
 	"strings"
 	"time"
-	"traverse/pkg/errors"
 	"traverse/configs"
+	"traverse/pkg/errors"
 
 	"github.com/golang-jwt/jwt/v5"
 )
@@ -46,6 +46,8 @@ func (api *api) TokenAuthMiddleware(next http.Handler) http.Handler {
 			errors.UnauthorizedErr(w, r, err)
 			return
 		}
+
+		// save the user context when user is logged in
 		ctx := context.WithValue(r.Context(), "user", user)
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
@@ -160,8 +162,3 @@ func (api *api) getUserFromClaims(
 
 	return user, nil
 }
-
-// func (r *response) writeWriter(code int) {
-// 	r.code = code
-// 	r.ResponseWriter.WriteHeader(code)
-// }

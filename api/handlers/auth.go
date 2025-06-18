@@ -3,11 +3,11 @@ package handlers
 import (
 	"log/slog"
 	"net/http"
-	"traverse/pkg/errors"
-	"traverse/pkg/validator"
 	"traverse/internal/services"
 	"traverse/internal/storage"
 	"traverse/models"
+	"traverse/pkg/errors"
+	json "traverse/pkg/validator"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-playground/validator/v10"
@@ -63,6 +63,7 @@ func (u *authHandler) RegistrationHandler(w http.ResponseWriter, r *http.Request
 
 	if err := json.Response(w, http.StatusCreated, user); err != nil {
 		errors.InternalServerErr(w, r, err)
+		return
 	}
 }
 
@@ -86,6 +87,7 @@ func (u *authHandler) LoginHandler(w http.ResponseWriter, r *http.Request) {
 
 	if err := json.Response(w, http.StatusAccepted, user); err != nil {
 		errors.InternalServerErr(w, r, err)
+		return
 	}
 }
 
@@ -106,5 +108,6 @@ func (a *authHandler) ActivateUserHandler(w http.ResponseWriter, r *http.Request
 
 	if err := json.Response(w, http.StatusNoContent, ""); err != nil {
 		errors.InternalServerErr(w, r, err)
+		return
 	}
 }

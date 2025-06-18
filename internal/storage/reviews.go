@@ -37,4 +37,5 @@ func (s *reviewStore) GetReviewsByContractID(
 	ctx context.Context,
 	cID int64,
 ) ([]models.Review, error) {
+	return nil, nil
 }

@@ -29,6 +29,7 @@ func NewStorage(db *db.PGDB) *Storage {
 	}
 }
 
+// begins a transaction from connection pool
 func ExecTx(ctx context.Context, db *db.PGDB, fn func(pgx.Tx) error) error {
 	outerTx, err := db.Pool.Begin(ctx)
 	if err != nil {
