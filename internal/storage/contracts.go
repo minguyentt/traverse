@@ -14,8 +14,8 @@ type ContractStorage interface {
 	Update(ctx context.Context, contract *models.Contract) error
 	Delete(ctx context.Context, cID int64) error
 
-	GetAllContracts(ctx context.Context, userID int64) ([]models.ContractMetaData, error)
-	GetByID(ctx context.Context, cID int64) (*models.Contract, error)
+	All(ctx context.Context, userID int64) ([]models.ContractMetaData, error)
+	ByID(ctx context.Context, cID int64) (*models.Contract, error)
 }
 
 type contractStore struct {
@@ -94,7 +94,7 @@ func (s *contractStore) Delete(ctx context.Context, cID int64) error {
 }
 
 // retrieve contract by id
-func (s *contractStore) GetByID(ctx context.Context, cID int64) (*models.Contract, error) {
+func (s *contractStore) ByID(ctx context.Context, cID int64) (*models.Contract, error) {
 	query := `
 		SELECT id, user_id, job_title, city, agency, created_at, updated_at, version
 		FROM contracts
@@ -140,7 +140,7 @@ func (s *contractStore) GetByID(ctx context.Context, cID int64) (*models.Contrac
 
 // TODO: fetch the necessary data from contracts
 // join the reviews and the review counts
-func (s *contractStore) GetAllContracts(
+func (s *contractStore) All(
 	ctx context.Context,
 	userID int64,
 ) ([]models.ContractMetaData, error) {

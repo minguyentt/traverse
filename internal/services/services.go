@@ -8,11 +8,13 @@ import (
 type Service struct {
 	Users UserService
 	Contract ContractService
+	Review ReviewService
 }
 
-func NewServices(storage *storage.Storage, auth auth.Authenticator) *Service {
+func New(storage *storage.Storage, auth auth.Authenticator) *Service {
 	return &Service{
 		Users: NewUserService(storage, auth),
 		Contract: NewContractService(storage),
+		Review: NewReviewService(storage),
 	}
 }

@@ -11,7 +11,7 @@ import (
 )
 
 type ContractHandler interface {
-	CreateContract(http.ResponseWriter, *http.Request)
+	CreateContract(w http.ResponseWriter, r *http.Request)
 }
 
 type contract struct {
@@ -19,9 +19,9 @@ type contract struct {
 	validate *validator.Validate
 }
 
-func NewContract(s services.ContractService, v *validator.Validate) *contract {
+func NewContract(cs services.ContractService, v *validator.Validate) *contract {
 	return &contract{
-		service:  s,
+		service:  cs,
 		validate: v,
 	}
 }

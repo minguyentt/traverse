@@ -9,4 +9,4 @@ CREATE TABLE IF NOT EXISTS contract_job_details
 );
 
 -- +goose Down
-DROP TABLE IF EXISTS contract_job_details
+DROP TABLE IF EXISTS contract_job_details;

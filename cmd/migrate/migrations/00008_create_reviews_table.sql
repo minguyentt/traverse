@@ -2,8 +2,8 @@
 CREATE TABLE IF NOT EXISTS reviews
 (
    id BIGSERIAL PRIMARY KEY,
-    contract_id BIGSERIAL NOT NULL,
-    user_id BIGSERIAL NOT NULL,
+    contract_id BIGINT NOT NULL,
+    user_id BIGINT NOT NULL,
     content TEXT NOT NULL,
     created_at TIMESTAMP(0) NOT NULL DEFAULT NOW()
 );

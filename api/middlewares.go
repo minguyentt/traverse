@@ -5,11 +5,14 @@ import (
 	"encoding/base64"
 	"fmt"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 	"traverse/configs"
+	"traverse/internal/storage"
 	"traverse/pkg/errors"
 
+	"github.com/go-chi/chi/v5"
 	"github.com/golang-jwt/jwt/v5"
 )
 
@@ -161,4 +164,32 @@ func (api *api) getUserFromClaims(
 	}
 
 	return user, nil
+}
+
+// TODO: implement the middleware to load the contractid downstream in the ctx window
+func (api *api) ContractMiddlewareCtx(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ctx := r.Context()
+		id := chi.URLParam(r, "contractID")
+		parsedId, err := strconv.ParseInt(id, 10, 64)
+		if err != nil {
+			errors.InternalServerErr(w, r, err)
+			return
+		}
+
+		c, err := api.service.Contract.GetByID(ctx, parsedId)
+		// TODO need a better error wrapper
+		if err != nil {
+			switch err {
+			case storage.ErrNotFound:
+				errors.NotFoundRequest(w, r, err)
+			default:
+				errors.InternalServerErr(w, r, err)
+			}
+			return
+		}
+
+		ctx = context.WithValue(ctx, "contract_id", c)
+		next.ServeHTTP(w, r.WithContext(ctx))
+	})
 }

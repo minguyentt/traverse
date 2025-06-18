@@ -8,13 +8,17 @@ import (
 	"github.com/go-playground/validator/v10"
 )
 
-type UserKey string
+type (
+	UserKey     string
+	ContractKey string
+)
 
 type Handlers struct {
 	HealthHandler
 	AuthHandler
 	UsersHandler
 	ContractHandler
+	ReviewHandler
 }
 
 // TODO: i dont like this constructor for handlers
@@ -24,6 +28,7 @@ func New(service *services.Service, validator *validator.Validate) *Handlers {
 		NewAuthHandler(service.Users, validator),
 		NewUserHandler(service.Users),
 		NewContract(service.Contract, validator),
+		NewReviewHandler(service.Review),
 	}
 }
 

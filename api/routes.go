@@ -32,26 +32,26 @@ func (api *api) mount() http.Handler {
 }
 
 func (api *api) mountPublicRoutes(r chi.Router) {
-	r.Post("/register", api.handler.RegistrationHandler)
-	r.Post("/login", api.handler.LoginHandler)
+	r.Post("/register", api.handler.Registration)
+	r.Post("/login", api.handler.Login)
 }
 
 func (api *api) mountUserRoutes(r chi.Router) {
 	r.Route("/user", func(user chi.Router) {
 		user.Group(func(g chi.Router) {
-			g.Put("/activate/{token}", api.handler.ActivateUserHandler)
+			g.Put("/activate/{token}", api.handler.ActivateUser)
 		})
 
 		user.Route("/{userID}", func(sub chi.Router) {
 			sub.Use(api.TokenAuthMiddleware)
-			sub.Get("/", api.handler.GetUserHandler)
+			sub.Get("/", api.handler.GetUser)
 		})
 	})
 
 	// Admin Only routes
 	r.Group(func(admin chi.Router) {
 		admin.Route("/users", func(users chi.Router) {
-			users.Get("/", api.handler.GetUsersHandler)
+			users.Get("/", api.handler.GetUsers)
 		})
 	})
 }
@@ -60,6 +60,11 @@ func (api *api) mountContractRoutes(r chi.Router) {
 	r.Route("/contracts", func(sub chi.Router) {
 		sub.Use(api.TokenAuthMiddleware)
 		sub.Post("/", api.handler.CreateContract)
+
+		sub.Route("/contractID", func(r chi.Router) {
+			r.Use(api.ContractMiddlewareCtx)
+			r.Get("/", api.handler.ReviewsWithContractID)
+		})
 	})
 }
 

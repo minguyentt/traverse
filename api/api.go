@@ -46,7 +46,7 @@ type api struct {
 	validator *validator.Validate
 }
 
-func NewServer(
+func New(
 	cfg *configs.Config,
 	db *db.PGDB,
 	logger *slog.Logger,
