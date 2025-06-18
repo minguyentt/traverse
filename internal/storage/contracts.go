@@ -245,7 +245,7 @@ func (s *contractStore) update(ctx context.Context, contract *models.Contract, t
 	query := `
 	UPDATE contracts
 	SET job_title = $1, city = $2, agency = $3, version = version + 1
-	where id = $5 AND version = $6
+	where id = $4 AND version = $5
 	RETURNING version
 	`
 

@@ -6,10 +6,13 @@ import (
 	"traverse/models"
 )
 
+//TODO: maybe i should pass in the logger for every service...
 type ContractService interface {
 	CreateContract(ctx context.Context, cpl *models.ContractPayload, userID int64) (*models.Contract, error)
 	GetByID(ctx context.Context, userID int64) (*models.Contract, error)
 	GetAllContracts(ctx context.Context, userID int64) ([]models.ContractMetaData, error)
+	UpdateContract(ctx context.Context, cpl *models.Contract) error
+	DeleteContract(ctx context.Context, cID int64) error
 }
 
 type contractService struct {
@@ -44,6 +47,22 @@ func (s *contractService) CreateContract(
 	}
 
 	return contract, nil
+}
+
+func (s *contractService) UpdateContract(ctx context.Context, cpl *models.Contract) error {
+	if err := s.store.Contracts.Update(ctx, cpl); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (s *contractService) DeleteContract(ctx context.Context, cID int64) error {
+	if err := s.store.Contracts.Delete(ctx, cID); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (s *contractService) GetAllContracts(ctx context.Context, userID int64) ([]models.ContractMetaData, error) {

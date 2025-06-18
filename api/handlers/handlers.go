@@ -1,16 +1,9 @@
 package handlers
 
 import (
-	"net/http"
 	"traverse/internal/services"
-	"traverse/models"
 
 	"github.com/go-playground/validator/v10"
-)
-
-type (
-	UserKey     string
-	ContractKey string
 )
 
 type Handlers struct {
@@ -30,9 +23,4 @@ func New(service *services.Service, validator *validator.Validate) *Handlers {
 		NewContract(service.Contract, validator),
 		NewReviewHandler(service.Review),
 	}
-}
-
-func GetUserCtx(r *http.Request) *models.User {
-	usr := r.Context().Value("user").(*models.User)
-	return usr
 }

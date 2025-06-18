@@ -44,3 +44,16 @@ type JobDetailPayload struct {
 	AssignmentLength string `json:"assignment_length" validate:"required,max=20"`
 	Experience       string `json:"experience"        validate:"required,max=20"`
 }
+
+type UpdateContractPayload struct {
+	JobTitle  *string                 `json:"job_title" validate:"omitempty,max=50"`
+	City      *string                 `json:"city"        validate:"omitempty,max=20"`
+	Agency    *string                 `json:"agency"      validate:"omitempty,max=50"`
+	JobDetail *UpdateJobDetailPayload `json:"job_detail" validate:"omitempty,dive"`
+}
+
+type UpdateJobDetailPayload struct {
+	Profession       *string `json:"profession"        validate:"omitempty,max=30"`
+	AssignmentLength *string `json:"assignment_length" validate:"omitempty,max=20"`
+	Experience       *string `json:"experience"        validate:"omitempty,max=20"`
+}
