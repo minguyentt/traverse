@@ -21,26 +21,18 @@ func main() {
 	// loading configs
 	cfg := configs.Env
 
-	//TODO: move logger configurations somewhere else later..
+	// TODO: move logger configurations somewhere else later..
 	// currently writes all errors in red
 	logger := slog.New(tint.NewHandler(os.Stderr, nil))
 	slog.SetDefault(slog.New(
 		tint.NewHandler(os.Stderr, &tint.Options{
 			Level:      slog.LevelDebug,
 			TimeFormat: time.Kitchen,
-			ReplaceAttr: func(groups []string, a slog.Attr) slog.Attr {
-				if a.Value.Kind() == slog.KindAny {
-					if _, ok := a.Value.Any().(error); ok {
-						return tint.Attr(9, a)
-					}
-				}
-				return a
-			},
 		}),
 	))
 
-	dbLogger := logger.With("area", "database pool connections")
-	serverlogger := logger.With("area", "API Server")
+	dbLogger := logger.With("area", "pgx")
+	apiLogger := logger.With("area", "API")
 
 	// setting up pool connections for db
 	db, err := db.NewPoolConn(ctx, cfg.DEV_DB.String(), dbLogger)
@@ -49,7 +41,7 @@ func main() {
 
 	router := router.New()
 
-	server := server.New(cfg, db, serverlogger)
+	server := server.New(cfg, db, apiLogger)
 	assert.NoError(err, "error setting up api routes", "err", err)
 
 	v1API, err := server.SetupAPIV1(ctx, router)

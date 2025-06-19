@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"math/rand"
+	"time"
 	"traverse/internal/db"
 	"traverse/internal/storage"
 	"traverse/models"
@@ -25,19 +27,12 @@ var passwords = []string{
 	"fastbunny22", "softwind890", "quietmoon55",
 }
 
-var contractNames = []string{
+var jobTitles = []string{
 	"SwiftMedix24", "NurseNomad_88", "VitalPulseX", "DocDart77", "HealNestRX",
 	"ScrubScout", "MedRoamer", "RN4Hire", "PatchByte", "SyringeSurfer",
 	"ChartMaster3", "PulseTrackz", "BedpanBandit", "ICUHustler", "CodeBlueCrew",
 	"DocOnWheels", "GauzeGhost", "ShiftDrifter", "ScalpelShark",
 	"VitalsCrate",
-}
-
-var content = []string{
-	"$38.50", "$41.25", "$36.75", "$44.00", "$39.80",
-	"$42.15", "$35.60", "$46.20", "$40.00", "$43.75",
-	"$37.90", "$45.00", "$39.00", "$41.95", "$48.10",
-	"$36.25", "$47.35", "$43.00", "$38.85", "$49.50",
 }
 
 var cities = []string{
@@ -48,18 +43,20 @@ var cities = []string{
 	"Boise, ID", "San Antonio, TX", "Richmond, VA", "Milwaukee, WI",
 }
 
-var addresses = []string{
-	"4212 Maple Ridge Ave", "903 Willow Glen Dr", "1780 Pine Hollow Rd", "3124 Crestview Blvd", "2206 Harbor Bend Ln",
-	"6953 Westmont Parkway", "1412 Copperfield Ct", "3847 Oakshade Loop", "7503 Summit Heights Way",
-	"2894 Ironwood Terrace", "5827 Meadowbrook Trail", "1178 Sandstone Dr",
-	"4429 Evergreen Hollow Rd", "3096 Lantern Cove Ln",
-	"2365 Ridgeway Point", "8945 Forest Knoll Rd", "7650 Silver Creek St",
-	"1950 Brookstone Ct", "6243 Juniper Edge Pl", "3308 Golden Grove Blvd",
-}
+var (
+	agency           = "Aya HealthCare"
+	profession       = "Registered Nurse"
+	assignmentLength = []string{
+		"12 weeks", "13 weeks", "14 weeks",
+	}
+)
+var experience = "1 year"
 
 func Seed(s *storage.Storage, db *db.PGDB) {
+	rand := rand.New(rand.NewSource(time.Now().Unix()))
+
 	ctx := context.Background()
-	users := generateUsers(30)
+	users := generateUsers(30, rand)
 
 	tx, _ := db.Begin(ctx)
 	for _, usr := range users {
@@ -75,7 +72,7 @@ func Seed(s *storage.Storage, db *db.PGDB) {
 	log.Println("Seeding completed")
 }
 
-func generateUsers(num int) []*models.User {
+func generateUsers(num int, r *rand.Rand) []*models.User {
 	users := make([]*models.User, num)
 
 	// TODO: need to generate random passwords
@@ -94,5 +91,35 @@ func generateUsers(num int) []*models.User {
 	return users
 }
 
-// TODO: generate contracts
-// TODO: generate reviews
+func generateDummyContracts(num int, users []*models.User, r *rand.Rand) []*models.Contract {
+	contracts := make([]*models.Contract, num)
+
+	for i := range num {
+		usr := users[r.Intn(len(users))]
+
+		contracts[i] = &models.Contract{
+			UserID:   usr.ID,
+			JobTitle: jobTitles[r.Intn(len(jobTitles))],
+			City:     cities[r.Intn(len(cities))],
+			Agency:   agency,
+			JobDetails: &models.ContractJobDetails{
+				Profession:       profession,
+				AssignmentLength: assignmentLength[r.Intn(len(assignmentLength))],
+				Experience:       experience,
+			},
+		}
+	}
+
+	return contracts
+}
+
+// TODO: dummy reviews for seeding
+
+// func generateDummyReviews(
+// 	num int,
+// 	users []*models.User,
+// 	contracts []*models.Contract,
+// 	r *rand.Rand,
+// ) []*models.Review {
+// 	return nil
+// }
