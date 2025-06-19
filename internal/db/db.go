@@ -2,12 +2,15 @@ package db
 
 import (
 	"context"
-	"fmt"
 	"log/slog"
 	"sync"
+	"time"
+	"traverse/internal/tracer"
 
+	"github.com/exaring/otelpgx"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/jackc/pgx/v5/tracelog"
 )
 
 // handle database connections with pool for concurrent queries
@@ -22,58 +25,62 @@ var (
 	once         sync.Once
 )
 
+// TODO: implement db pool connection with Options
 func NewPoolConn(
 	ctx context.Context,
 	connString string,
 	logger *slog.Logger,
 ) (*PGDB, error) {
-	var err error
 	once.Do(func() {
 		cfg, parseErr := pgxpool.ParseConfig(connString)
-		if err != nil {
-			err = parseErr
-			return
+		if parseErr != nil {
+			panic(parseErr)
 		}
+
+		// setup pool configuration
+		cfg.MaxConns = 15
+		cfg.MinConns = 5
+		cfg.MaxConnLifetime = time.Hour
+		cfg.MaxConnIdleTime = 30 * time.Minute
 
 		logger.Info("Attempting to connect to database pool...")
 
-		cfg.BeforeConnect = func(ctx context.Context, c *pgx.ConnConfig) error {
-			c.RuntimeParams["application_name"] = "TraverseApp"
+		// testing the output with logging
+		logger.Warn(
+			"connection pool config",
+			"user",
+			cfg.ConnConfig.User,
+			"pass",
+			cfg.ConnConfig.Password,
+			"host",
+			cfg.ConnConfig.Host,
+			"database",
+			cfg.ConnConfig.Database,
+			"port",
+			cfg.ConnConfig.Port,
+		)
 
-			// set connection timeout?
+		traceLogger := tracer.NewLogger(logger, "INVALID_TRACE_LOG_LEVEL")
 
-			if c.Database == "" {
-				return fmt.Errorf("database name is required")
-			}
-
-			return nil
+		multTcr := tracer.MultiQuery{
+			Tracers: []pgx.QueryTracer{
+				otelpgx.NewTracer(),
+				&tracelog.TraceLog{
+					Logger:   traceLogger,
+					LogLevel: tracelog.LogLevelTrace,
+				},
+			},
 		}
 
-		// beforeAcquire hook
-		cfg.BeforeAcquire = func(ctx context.Context, conn *pgx.Conn) bool {
-			// current user_name connections
-			connInfo := conn.PgConn().ParameterStatus("session_authorization")
+		cfg.ConnConfig.Tracer = &multTcr
 
-			// logger.Info("checking for existing connections...", "user", connInfo)
-
-			// handle not in transaction
-			if inTx := conn.PgConn().TxStatus() != 'I'; inTx {
-				logger.Info("Connection in transaction, unable to acquire", "user", connInfo)
-				return false
-			}
-			// ping database
-			err = conn.Ping(ctx)
-			if err != nil {
-				logger.Error("connection failed to ping database", "error", err)
-			}
-
-			return true
-		}
-
-		pool, cfgErr := pgxpool.NewWithConfig(ctx, cfg)
+		pool, err := pgxpool.NewWithConfig(ctx, cfg)
 		if err != nil {
-			err = cfgErr
-			return
+			panic(err)
+		}
+
+		if err := pool.Ping(ctx); err != nil {
+			panic(err)
 		}
 
 		poolInstance = &PGDB{
@@ -83,11 +90,6 @@ func NewPoolConn(
 	})
 
 	return poolInstance, nil
-}
-
-// return existing pool instance
-func GetPool() *PGDB {
-	return poolInstance
 }
 
 func (p *PGDB) GetConnection(ctx context.Context) (*pgxpool.Conn, error) {

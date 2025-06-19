@@ -14,17 +14,17 @@ import (
 func (api *api) mount() http.Handler {
 	// api.mux.Use(middleware.RequestID)
 	api.mux.Use(middleware.RealIP)
-	api.mux.Use(middleware.Logger)
+	// api.mux.Use(middleware.Logger)
+	api.mux.Use(api.LoggerMiddleware)
 	api.mux.Use(middleware.Recoverer)
 	api.mux.Use(cors.Handler(configs.WithCorsOpts()))
 
 	api.mux.Use(middleware.Timeout(60 * time.Second))
-	// api.mux.Use(api.LoggerMiddleware)
 
 	api.mux.Route("/v1", func(r chi.Router) {
 		api.mountPublicRoutes(r)
 		api.mountUserRoutes(r)
-
+		api.mountContractRoutes(r)
 		api.mountAdminRoutes(r)
 	})
 
@@ -32,33 +32,45 @@ func (api *api) mount() http.Handler {
 }
 
 func (api *api) mountPublicRoutes(r chi.Router) {
-	r.Post("/register", api.handlers.RegistrationHandler)
-	r.Post("/login", api.handlers.LoginHandler)
+	r.Post("/register", api.handler.Registration)
+	r.Post("/login", api.handler.Login)
 }
 
 func (api *api) mountUserRoutes(r chi.Router) {
 	r.Route("/user", func(user chi.Router) {
 		user.Group(func(g chi.Router) {
-			g.Put("/activate/{token}", api.handlers.ActivateUserHandler)
+			g.Put("/activate/{token}", api.handler.ActivateUser)
 		})
 
 		user.Route("/{userID}", func(sub chi.Router) {
 			sub.Use(api.TokenAuthMiddleware)
-			sub.Get("/", api.handlers.GetUserHandler)
+			sub.Get("/", api.handler.GetUser)
 		})
 	})
 
 	// Admin Only routes
 	r.Group(func(admin chi.Router) {
 		admin.Route("/users", func(users chi.Router) {
-			users.Get("/", api.handlers.GetUsersHandler)
+			users.Get("/", api.handler.GetUsers)
+		})
+	})
+}
+
+func (api *api) mountContractRoutes(r chi.Router) {
+	r.Route("/contracts", func(sub chi.Router) {
+		sub.Use(api.TokenAuthMiddleware)
+		sub.Post("/", api.handler.CreateContract)
+
+		sub.Route("/contractID", func(r chi.Router) {
+			r.Use(api.ContractMiddlewareCtx)
+			r.Get("/", api.handler.ReviewsWithContractID)
 		})
 	})
 }
 
 func (api *api) mountAdminRoutes(r chi.Router) {
 	r.Route("/system", func(sys chi.Router) {
-		sys.Get("/health", api.handlers.HealthChecker)
+		sys.Get("/health", api.handler.HealthChecker)
 
 		sys.Group(func(admin chi.Router) {
 			admin.Use(api.BasicAuthMiddleware)

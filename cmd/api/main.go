@@ -3,12 +3,16 @@ package main
 import (
 	"context"
 	"log/slog"
+	"os"
+	"time"
 	"traverse/api/router"
 	"traverse/configs"
 	"traverse/internal/assert"
 	"traverse/internal/db"
 
 	server "traverse/api"
+
+	"github.com/lmittmann/tint"
 )
 
 func main() {
@@ -17,10 +21,18 @@ func main() {
 	// loading configs
 	cfg := configs.Env
 
-	// setup loggers
-	logger := slog.Default()
-	dbLogger := logger.With("area", "database pool connections")
-	serverlogger := logger.With("area", "API Server")
+	// TODO: move logger configurations somewhere else later..
+	// currently writes all errors in red
+	logger := slog.New(tint.NewHandler(os.Stderr, nil))
+	slog.SetDefault(slog.New(
+		tint.NewHandler(os.Stderr, &tint.Options{
+			Level:      slog.LevelDebug,
+			TimeFormat: time.Kitchen,
+		}),
+	))
+
+	dbLogger := logger.With("area", "pgx")
+	apiLogger := logger.With("area", "API")
 
 	// setting up pool connections for db
 	db, err := db.NewPoolConn(ctx, cfg.DEV_DB.String(), dbLogger)
@@ -29,7 +41,7 @@ func main() {
 
 	router := router.New()
 
-	server := server.NewServer(cfg, db, serverlogger)
+	server := server.New(cfg, db, apiLogger)
 	assert.NoError(err, "error setting up api routes", "err", err)
 
 	v1API, err := server.SetupAPIV1(ctx, router)

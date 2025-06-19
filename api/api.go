@@ -13,7 +13,6 @@ import (
 	"syscall"
 	"time"
 	"traverse/api/handlers"
-	"traverse/api/json"
 	"traverse/api/router"
 	"traverse/configs"
 	"traverse/internal/assert"
@@ -21,6 +20,7 @@ import (
 	"traverse/internal/db"
 	"traverse/internal/services"
 	"traverse/internal/storage"
+	json "traverse/pkg/validator"
 
 	"github.com/go-playground/validator/v10"
 )
@@ -36,17 +36,17 @@ type server struct {
 
 type api struct {
 	*server
-	ctx      context.Context
-	mux      *router.Router
-	handlers *handlers.Handlers
-	service  *services.Service
-	storage  *storage.Storage
+	ctx     context.Context
+	mux     *router.Router
+	handler *handlers.Handlers
+	service *services.Service
+	storage *storage.Storage
 
 	jwt       auth.Authenticator
 	validator *validator.Validate
 }
 
-func NewServer(
+func New(
 	cfg *configs.Config,
 	db *db.PGDB,
 	logger *slog.Logger,
@@ -64,9 +64,9 @@ func (s *server) SetupAPIV1(
 ) (*api, error) {
 	jwtAuth := auth.NewJWTAuth(s.cfg.AUTH.Token.Secret, s.cfg.AUTH.Token.Aud, s.cfg.AUTH.Token.Iss)
 	validator := json.NewValidator()
-	storage := storage.NewStorage(s.db)
-	service := services.NewServices(storage, jwtAuth)
-	handlers := handlers.NewHandlers(service, validator)
+	storage := storage.New(s.db)
+	service := services.New(storage, jwtAuth)
+	handlers := handlers.New(service, validator)
 	assert.NotNil(handlers, "nil encounter")
 	assert.NotNil(service, "nil encounter")
 	assert.NotNil(storage, "nil encounter")
@@ -75,7 +75,7 @@ func (s *server) SetupAPIV1(
 		ctx:       ctx,
 		server:    s,
 		mux:       router,
-		handlers:  handlers,
+		handler:   handlers,
 		service:   service,
 		storage:   storage,
 		jwt:       jwtAuth,
@@ -131,7 +131,7 @@ func (api *api) Run() error {
 }
 
 func (api *api) waitConnection() error {
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
 	// implement timer
@@ -146,7 +146,7 @@ func (api *api) waitConnection() error {
 				api.logger.Info("succesfully connected to database")
 				return nil
 			}
-			api.logger.Info("waiting for database connection...", "error", err)
+			api.logger.Warn("waiting for database connection...", "msg", err)
 		}
 	}
 }

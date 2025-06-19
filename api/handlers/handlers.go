@@ -7,16 +7,20 @@ import (
 )
 
 type Handlers struct {
-    HealthHandler
+	HealthHandler
 	AuthHandler
 	UsersHandler
+	ContractHandler
+	ReviewHandler
 }
 
 // TODO: i dont like this constructor for handlers
-func NewHandlers(service *services.Service, validator *validator.Validate) *Handlers {
+func New(service *services.Service, validator *validator.Validate) *Handlers {
 	return &Handlers{
-        NewHealthHandler(),
+		NewHealthHandler(),
 		NewAuthHandler(service.Users, validator),
 		NewUserHandler(service.Users),
+		NewContract(service.Contract, validator),
+		NewReviewHandler(service.Review),
 	}
 }

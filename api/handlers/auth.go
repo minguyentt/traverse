@@ -3,20 +3,20 @@ package handlers
 import (
 	"log/slog"
 	"net/http"
-	"traverse/api/errors"
-	"traverse/api/json"
 	"traverse/internal/services"
 	"traverse/internal/storage"
 	"traverse/models"
+	"traverse/pkg/errors"
+	json "traverse/pkg/validator"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-playground/validator/v10"
 )
 
 type AuthHandler interface {
-	RegistrationHandler(http.ResponseWriter, *http.Request)
-	LoginHandler(http.ResponseWriter, *http.Request)
-	ActivateUserHandler(http.ResponseWriter, *http.Request)
+	Registration(http.ResponseWriter, *http.Request)
+	Login(http.ResponseWriter, *http.Request)
+	ActivateUser(http.ResponseWriter, *http.Request)
 }
 
 type authHandler struct {
@@ -31,7 +31,7 @@ func NewAuthHandler(s services.UserService, v *validator.Validate) *authHandler 
 	}
 }
 
-func (u *authHandler) RegistrationHandler(w http.ResponseWriter, r *http.Request) {
+func (u *authHandler) Registration(w http.ResponseWriter, r *http.Request) {
 	// Use RegistrationPayload json struct
 	var userPayload models.RegistrationPayload
 
@@ -63,10 +63,11 @@ func (u *authHandler) RegistrationHandler(w http.ResponseWriter, r *http.Request
 
 	if err := json.Response(w, http.StatusCreated, user); err != nil {
 		errors.InternalServerErr(w, r, err)
+		return
 	}
 }
 
-func (u *authHandler) LoginHandler(w http.ResponseWriter, r *http.Request) {
+func (u *authHandler) Login(w http.ResponseWriter, r *http.Request) {
 	var payload models.UserLoginPayload
 	if err := json.Read(w, r, &payload); err != nil {
 		errors.BadRequestResponse(w, r, err)
@@ -78,7 +79,7 @@ func (u *authHandler) LoginHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-    user,err := u.service.LoginUser(r.Context(), &payload)
+	user, err := u.service.LoginUser(r.Context(), &payload)
 	if err != nil {
 		errors.UnauthorizedErr(w, r, err)
 		return
@@ -86,10 +87,11 @@ func (u *authHandler) LoginHandler(w http.ResponseWriter, r *http.Request) {
 
 	if err := json.Response(w, http.StatusAccepted, user); err != nil {
 		errors.InternalServerErr(w, r, err)
+		return
 	}
 }
 
-func (a *authHandler) ActivateUserHandler(w http.ResponseWriter, r *http.Request) {
+func (a *authHandler) ActivateUser(w http.ResponseWriter, r *http.Request) {
 	token := chi.URLParam(r, "token")
 	slog.Info("token", "out", token)
 
@@ -106,5 +108,6 @@ func (a *authHandler) ActivateUserHandler(w http.ResponseWriter, r *http.Request
 
 	if err := json.Response(w, http.StatusNoContent, ""); err != nil {
 		errors.InternalServerErr(w, r, err)
+		return
 	}
 }

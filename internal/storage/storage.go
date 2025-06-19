@@ -3,12 +3,15 @@ package storage
 import (
 	"context"
 	"errors"
+	"time"
 	"traverse/internal/db"
 
 	"github.com/jackc/pgx/v5"
 )
 
 var (
+	QueryTimeoutDuration = time.Second * 5
+
 	ErrNotFound          = errors.New("no resource found")
 	ErrDuplicates        = errors.New("found existing resource")
 	ErrDuplicateUsername = errors.New("existing duplicate key for username")
@@ -16,14 +19,19 @@ var (
 
 type Storage struct {
 	Users UserStorage
+	Contracts ContractStorage
+	Reviews ReviewStorage
 }
 
-func NewStorage(db *db.PGDB) *Storage {
+func New(db *db.PGDB) *Storage {
 	return &Storage{
-		Users: &userStore{db},
+		Users: NewUserStore(db),
+		Contracts: NewContractStore(db),
+		Reviews: NewReviewStore(db),
 	}
 }
 
+// begins a transaction from connection pool
 func ExecTx(ctx context.Context, db *db.PGDB, fn func(pgx.Tx) error) error {
 	outerTx, err := db.Pool.Begin(ctx)
 	if err != nil {
