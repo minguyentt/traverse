@@ -16,11 +16,6 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 )
 
-// response wrapper for log middleware
-type response struct {
-	http.ResponseWriter
-	code int
-}
 
 // TokenAuthMiddleware validates JWT tokens and injects the authenticated user into the request context.
 // It follows a fail-fast approach for security validations and provides detailed error responses.
@@ -56,9 +51,6 @@ func (api *api) TokenAuthMiddleware(next http.Handler) http.Handler {
 	})
 }
 
-// example:
-// basic Authentication string
-// "Basic QWxhZGRpbjpvcGVuIHNlc2FtZQ==" returns ("Aladdin", "open sesame", true).
 func (api *api) BasicAuthMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		parts, err := parseAuthHeader(r, "Basic")
@@ -88,7 +80,6 @@ func (api *api) BasicAuthMiddleware(next http.Handler) http.Handler {
 	})
 }
 
-// middleware logger
 func (api *api) LoggerMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		start := time.Now()
@@ -104,6 +95,14 @@ func (api *api) LoggerMiddleware(next http.Handler) http.Handler {
 			"ip", r.RemoteAddr,
 			"user_agent", r.UserAgent(),
 		)
+	})
+}
+
+//TODO: figure out how i want to utilize this redis cache for users...
+// cache user middleware
+func (api *api) CacheUserMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+
 	})
 }
 
@@ -192,4 +191,10 @@ func (api *api) ContractMiddlewareCtx(next http.Handler) http.Handler {
 		ctx = context.WithValue(ctx, "contract_id", c)
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
+}
+
+// response wrapper for log middleware
+type response struct {
+	http.ResponseWriter
+	code int
 }

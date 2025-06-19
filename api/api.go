@@ -18,6 +18,7 @@ import (
 	"traverse/internal/assert"
 	"traverse/internal/auth"
 	"traverse/internal/db"
+	"traverse/internal/db/redis/cache"
 	"traverse/internal/services"
 	"traverse/internal/storage"
 	json "traverse/pkg/validator"
@@ -31,6 +32,7 @@ const version = "1.1.0"
 type server struct {
 	cfg    *configs.Config
 	db     *db.PGDB
+	cache  cache.Cache
 	logger *slog.Logger
 }
 
@@ -49,11 +51,13 @@ type api struct {
 func New(
 	cfg *configs.Config,
 	db *db.PGDB,
+	cache cache.Cache,
 	logger *slog.Logger,
 ) *server {
 	return &server{
 		cfg:    cfg,
 		db:     db,
+		cache:  cache,
 		logger: logger,
 	}
 }

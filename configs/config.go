@@ -6,9 +6,9 @@ import (
 	"os"
 	"regexp"
 	"time"
+	"traverse/internal/assert"
 
 	"github.com/joho/godotenv"
-	"traverse/internal/assert"
 )
 
 const projectDir = "traverse" // change to project name directory
@@ -19,6 +19,7 @@ type Config struct {
 	DB         *DBConfig
 	DEV_DB     *Local_DBConfig
 	AUTH       *AuthConfig
+	REDIS      *RedisConfig
 }
 
 type AuthConfig struct {
@@ -66,6 +67,13 @@ type MigrationConfig struct {
 	DIR string
 }
 
+type RedisConfig struct {
+	Addr     string
+	Password string
+	DB       int
+	Enabled  bool
+}
+
 var Env = LoadEnvs()
 
 func LoadEnvs() *Config {
@@ -110,6 +118,12 @@ func LoadEnvs() *Config {
 				Username: getEnv("AUTH_ADMIN_USER"),
 				Password: getEnv("AUTH_ADMIN_PASS"),
 			},
+		},
+		REDIS: &RedisConfig{
+			Addr:     getEnv("REDIS_CLIENT_ADDR"),
+			Password: getEnv("REDIS_CLIENT_PASSWORD"),
+			DB:       getEnvAsInt("REDIS_CLIENT_DB"),
+			Enabled: getEnvAsBool("REDIS_CLIENT_ENABLED"),
 		},
 	}
 }

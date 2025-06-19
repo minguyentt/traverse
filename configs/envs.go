@@ -5,6 +5,7 @@ import (
 	"os"
 	"strconv"
 	"time"
+	"traverse/internal/assert"
 )
 
 func getEnv(key string) string {
@@ -14,6 +15,26 @@ func getEnv(key string) string {
 	}
 
 	return val
+}
+
+func getEnvAsInt(key string) int {
+	val, exists := os.LookupEnv(key)
+	assert.Assert(exists == false, "couldn't look up env variable", key)
+
+	i, err := strconv.Atoi(val)
+	assert.Assert(err != nil, "should never fail to parse str to int", key)
+
+	return i
+}
+
+func getEnvAsBool(key string) bool {
+	val, exists := os.LookupEnv(key)
+	assert.Assert(exists == false, "couldn't look up env variable", key)
+
+	bool, err := strconv.ParseBool(val)
+	assert.Assert(err != nil, "should never fail to parse str to bool", key)
+
+	return bool
 }
 
 func getEnvAsInt32(key string, fb int32) int32 {
