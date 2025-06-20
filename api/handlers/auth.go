@@ -99,7 +99,7 @@ func (u *authHandler) Login(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// upon login request we will cache the user token session for 24 hrs
-	userCacheKey := fmt.Sprintf("user-%d", userToken.ID)
+	userCacheKey := fmt.Sprintf("user-%d:activation", userToken.ID)
 	err = u.cache.Set(ctx, userCacheKey, data, 24*time.Hour)
 	if err != nil {
 		errors.InternalServerErr(w, r, err)

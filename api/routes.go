@@ -41,6 +41,7 @@ func (api *api) mountUserRoutes(r chi.Router) {
 		user.Use(api.middleware.TokenAuth)
 		user.Put("/activate", api.handler.ActivateUser)
 
+		user.Get("/feed", api.handler.Feed)
 		user.Get("/{userID}", api.handler.GetUser)
 	})
 

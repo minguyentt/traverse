@@ -14,6 +14,7 @@ import (
 )
 
 type ContractHandler interface {
+	Feed(w http.ResponseWriter, r *http.Request)
 	CreateContract(w http.ResponseWriter, r *http.Request)
 	UpdateContract(w http.ResponseWriter, r *http.Request)
 	DeleteContract(w http.ResponseWriter, r *http.Request)
@@ -28,6 +29,22 @@ func NewContract(cs services.ContractService, v *validator.Validate) *contract {
 	return &contract{
 		service:  cs,
 		validate: v,
+	}
+}
+
+func (h *contract) Feed(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	usr := r.Context().Value("user").(*models.User)
+
+	data, err := h.service.GetAllContracts(ctx, usr.ID)
+	if err != nil {
+		errors.InternalServerErr(w, r, err)
+		return
+	}
+
+	if err := response.JSON(w, http.StatusOK, data); err != nil {
+		errors.InternalServerErr(w, r, err)
+		return
 	}
 }
 
