@@ -122,8 +122,8 @@ func LoadEnvs() *Config {
 		REDIS: &RedisConfig{
 			Addr:     getEnv("REDIS_CLIENT_ADDR"),
 			Password: getEnv("REDIS_CLIENT_PASSWORD"),
-			DB:       getEnvAsInt("REDIS_CLIENT_DB"),
-			Enabled: getEnvAsBool("REDIS_CLIENT_ENABLED"),
+			DB:       0,
+			Enabled:  true,
 		},
 	}
 }

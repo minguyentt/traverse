@@ -14,7 +14,7 @@ import (
 )
 
 type UserService interface {
-    GetUsers(ctx context.Context) ([]models.User, error)
+	GetUsers(ctx context.Context) ([]models.User, error)
 	GetUser(ctx context.Context, username string) (*models.User, error)
 	UserByID(ctx context.Context, userID int64) (*models.User, error)
 
@@ -26,10 +26,10 @@ type UserService interface {
 
 type userService struct {
 	store        *storage.Storage
-	authenticate auth.Authenticator
+	authenticate auth.TokenAuthenticator
 }
 
-func NewUserService(store *storage.Storage, auth auth.Authenticator) *userService {
+func NewUserService(store *storage.Storage, auth auth.TokenAuthenticator) *userService {
 	return &userService{
 		store:        store,
 		authenticate: auth,
@@ -37,12 +37,12 @@ func NewUserService(store *storage.Storage, auth auth.Authenticator) *userServic
 }
 
 func (s *userService) GetUsers(ctx context.Context) ([]models.User, error) {
-    users, err := s.store.Users.FetchAll(ctx)
-    if err != nil {
-        return nil, err
-    }
+	users, err := s.store.Users.FetchAll(ctx)
+	if err != nil {
+		return nil, err
+	}
 
-    return users, nil
+	return users, nil
 }
 
 func (s *userService) GetUser(ctx context.Context, username string) (*models.User, error) {
@@ -127,7 +127,8 @@ func (s *userService) LoginUser(
 	}
 
 	userToken := &models.UserToken{
-		Token:     tokenStr,
+		ID:    user.ID,
+		Token: tokenStr,
 	}
 
 	return userToken, nil

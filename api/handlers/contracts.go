@@ -6,7 +6,7 @@ import (
 	"traverse/internal/services"
 	"traverse/models"
 	"traverse/pkg/errors"
-	json "traverse/pkg/validator"
+	"traverse/pkg/response"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-playground/validator/v10"
@@ -34,7 +34,7 @@ func NewContract(cs services.ContractService, v *validator.Validate) *contract {
 func (h *contract) CreateContract(w http.ResponseWriter, r *http.Request) {
 	var contractPayload models.ContractPayload
 
-	err := json.Read(w, r, &contractPayload)
+	err := response.Read(w, r, &contractPayload)
 	if err != nil {
 		errors.BadRequestResponse(w, r, err)
 		return
@@ -55,7 +55,7 @@ func (h *contract) CreateContract(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := json.Response(w, http.StatusCreated, c); err != nil {
+	if err := response.JSON(w, http.StatusCreated, c); err != nil {
 		errors.InternalServerErr(w, r, err)
 		return
 	}
@@ -115,14 +115,14 @@ func (h *contract) UpdateContract(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := json.Response(w, http.StatusOK, con); err != nil {
+	if err := response.JSON(w, http.StatusOK, con); err != nil {
 		errors.InternalServerErr(w, r, err)
 		return
 	}
 }
 
 func (h *contract) DeleteContract(w http.ResponseWriter, r *http.Request) {
-	id, err := strconv.ParseInt(chi.URLParam(r, "contractID"), 10, 64)
+	id, err := strconv.ParseInt(chi.URLParam(r, "id"), 10, 64)
 	if err != nil {
 		errors.InternalServerErr(w, r, err)
 		return

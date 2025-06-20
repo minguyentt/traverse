@@ -19,11 +19,12 @@ import (
 	"traverse/internal/auth"
 	"traverse/internal/db"
 	"traverse/internal/db/redis/cache"
+	"traverse/internal/middlewares"
 	"traverse/internal/services"
 	"traverse/internal/storage"
-	json "traverse/pkg/validator"
+	"traverse/pkg/validator"
 
-	"github.com/go-playground/validator/v10"
+	"github.com/redis/go-redis/v9"
 )
 
 // api version control
@@ -32,32 +33,29 @@ const version = "1.1.0"
 type server struct {
 	cfg    *configs.Config
 	db     *db.PGDB
-	cache  cache.Cache
+	redis  *redis.Client
 	logger *slog.Logger
 }
 
 type api struct {
 	*server
-	ctx     context.Context
-	mux     *router.Router
-	handler *handlers.Handlers
-	service *services.Service
-	storage *storage.Storage
-
-	jwt       auth.Authenticator
-	validator *validator.Validate
+	ctx        context.Context
+	mux        *router.Router
+	handler    *handlers.Handlers
+	middleware *middlewares.Middleware
+	cache      cache.Cache
 }
 
 func New(
 	cfg *configs.Config,
 	db *db.PGDB,
-	cache cache.Cache,
+	redis *redis.Client,
 	logger *slog.Logger,
 ) *server {
 	return &server{
 		cfg:    cfg,
 		db:     db,
-		cache:  cache,
+		redis:  redis,
 		logger: logger,
 	}
 }
@@ -66,24 +64,38 @@ func (s *server) SetupAPIV1(
 	ctx context.Context,
 	router *router.Router,
 ) (*api, error) {
-	jwtAuth := auth.NewJWTAuth(s.cfg.AUTH.Token.Secret, s.cfg.AUTH.Token.Aud, s.cfg.AUTH.Token.Iss)
-	validator := json.NewValidator()
+	// wiring api deps
+
+	rdsCache, err := cache.New(s.redis)
+	assert.NoError(err, "failed to create new redis cache")
+
+	jwt := auth.New(s.cfg.AUTH.Token.Secret, s.cfg.AUTH.Token.Aud, s.cfg.AUTH.Token.Iss)
+	v := validator.NewValidator()
 	storage := storage.New(s.db)
-	service := services.New(storage, jwtAuth)
-	handlers := handlers.New(service, validator)
+	service := services.New(storage, jwt)
+
+	deps := handlers.HandlerDeps{
+		Service:   service,
+		Validator: v,
+		Cache:     rdsCache,
+	}
+
+	handlers := handlers.New(&deps)
+
+	mw := middlewares.New(jwt, service.Users, s.logger)
+
 	assert.NotNil(handlers, "nil encounter")
 	assert.NotNil(service, "nil encounter")
 	assert.NotNil(storage, "nil encounter")
 
+	// TODO: remove the unused dependencies
 	api := &api{
-		ctx:       ctx,
-		server:    s,
-		mux:       router,
-		handler:   handlers,
-		service:   service,
-		storage:   storage,
-		jwt:       jwtAuth,
-		validator: validator,
+		ctx:        ctx,
+		server:     s,
+		mux:        router,
+		handler:    handlers,
+		cache:      rdsCache,
+		middleware: mw,
 	}
 
 	return api, nil

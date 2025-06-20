@@ -3,16 +3,16 @@ package handlers
 import (
 	"net/http"
 	"strconv"
-	"traverse/pkg/errors"
-	"traverse/pkg/validator"
 	"traverse/internal/services"
+	"traverse/pkg/errors"
+	"traverse/pkg/response"
 
 	"github.com/go-chi/chi/v5"
 )
 
 type UsersHandler interface {
 	GetUser(w http.ResponseWriter, r *http.Request)
-    GetUsers(w http.ResponseWriter, r *http.Request)
+	GetUsers(w http.ResponseWriter, r *http.Request)
 }
 
 type usersHandler struct {
@@ -20,7 +20,7 @@ type usersHandler struct {
 }
 
 func NewUserHandler(services services.UserService) *usersHandler {
-    return &usersHandler{service: services}
+	return &usersHandler{service: services}
 }
 
 func (h *usersHandler) GetUser(w http.ResponseWriter, r *http.Request) {
@@ -40,21 +40,21 @@ func (h *usersHandler) GetUser(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// respond with JSON for any errors that happened
-	if err := json.Response(w, http.StatusOK, user); err != nil {
-        errors.InternalServerErr(w, r, err)
+	if err := response.JSON(w, http.StatusOK, user); err != nil {
+		errors.InternalServerErr(w, r, err)
 		return
 	}
 }
 
 func (h *usersHandler) GetUsers(w http.ResponseWriter, r *http.Request) {
-    users, err := h.service.GetUsers(r.Context())
-    if err != nil {
+	users, err := h.service.GetUsers(r.Context())
+	if err != nil {
 		errors.BadRequestResponse(w, r, err)
 		return
-    }
+	}
 
-    if err := json.Response(w, http.StatusOK, users); err != nil {
-        errors.InternalServerErr(w, r, err)
-        return
-    }
+	if err := response.JSON(w, http.StatusOK, users); err != nil {
+		errors.InternalServerErr(w, r, err)
+		return
+	}
 }

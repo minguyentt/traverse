@@ -3,8 +3,7 @@ package errors
 import (
 	"log/slog"
 	"net/http"
-
-	"traverse/pkg/validator"
+	"traverse/pkg/response"
 )
 
 func InternalServerErr(w http.ResponseWriter, r *http.Request, err error) {
@@ -18,13 +17,13 @@ func InternalServerErr(w http.ResponseWriter, r *http.Request, err error) {
 		err.Error(),
 	)
 
-	json.ErrResponse(w, http.StatusInternalServerError, "encountered internal server error")
+	response.Error(w, http.StatusInternalServerError, "encountered internal server error")
 }
 
 func BadRequestResponse(w http.ResponseWriter, r *http.Request, err error) {
 	slog.Warn("bad HTTP request", "METHOD", r.Method, "PATH", r.URL.Path, "ERROR", err.Error())
 
-	json.ErrResponse(w, http.StatusBadRequest, err.Error())
+	response.Error(w, http.StatusBadRequest, err.Error())
 }
 
 func NotFoundRequest(w http.ResponseWriter, r *http.Request, err error) {
@@ -38,7 +37,7 @@ func NotFoundRequest(w http.ResponseWriter, r *http.Request, err error) {
 		err.Error(),
 	)
 
-	json.ErrResponse(w, http.StatusNotFound, err.Error())
+	response.Error(w, http.StatusNotFound, err.Error())
 }
 
 func UnauthorizedBasicErr(w http.ResponseWriter, r *http.Request, err error) {
@@ -54,7 +53,7 @@ func UnauthorizedBasicErr(w http.ResponseWriter, r *http.Request, err error) {
 
 	w.Header().Set("WWW-Authenticate", `Basic realm="restricted", charset="UTF-8"`)
 
-	json.ErrResponse(w, http.StatusUnauthorized, "unauthorized")
+	response.Error(w, http.StatusUnauthorized, "unauthorized")
 }
 
 func UnauthorizedErr(w http.ResponseWriter, r *http.Request, err error) {
@@ -68,5 +67,5 @@ func UnauthorizedErr(w http.ResponseWriter, r *http.Request, err error) {
 		err.Error(),
 	)
 
-	json.ErrResponse(w, http.StatusUnauthorized, "unauthorized")
+	response.Error(w, http.StatusUnauthorized, "unauthorized")
 }

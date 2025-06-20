@@ -15,7 +15,7 @@ func (api *api) mount() http.Handler {
 	// api.mux.Use(middleware.RequestID)
 	api.mux.Use(middleware.RealIP)
 	// api.mux.Use(middleware.Logger)
-	api.mux.Use(api.LoggerMiddleware)
+	api.mux.Use(api.middleware.LoggerMiddleware)
 	api.mux.Use(middleware.Recoverer)
 	api.mux.Use(cors.Handler(configs.WithCorsOpts()))
 
@@ -37,33 +37,30 @@ func (api *api) mountPublicRoutes(r chi.Router) {
 }
 
 func (api *api) mountUserRoutes(r chi.Router) {
-	r.Route("/user", func(user chi.Router) {
-		user.Group(func(g chi.Router) {
-			g.Put("/activate/{token}", api.handler.ActivateUser)
-		})
+	r.Route("/users", func(user chi.Router) {
+		user.Use(api.middleware.TokenAuth)
+		user.Put("/activate", api.handler.ActivateUser)
 
-		user.Route("/{userID}", func(sub chi.Router) {
-			sub.Use(api.TokenAuthMiddleware)
-			sub.Get("/", api.handler.GetUser)
-		})
+		user.Get("/{userID}", api.handler.GetUser)
 	})
 
 	// Admin Only routes
-	r.Group(func(admin chi.Router) {
-		admin.Route("/users", func(users chi.Router) {
-			users.Get("/", api.handler.GetUsers)
-		})
-	})
+	// r.Group(func(admin chi.Router) {
+	// 	admin.Route("/users", func(users chi.Router) {
+	//			NEED ADMIN ONLY MIDDLEWARE
+	// 		users.Get("/", api.handler.GetUsers)
+	// 	})
+	// })
 }
 
 func (api *api) mountContractRoutes(r chi.Router) {
 	r.Route("/contracts", func(sub chi.Router) {
-		sub.Use(api.TokenAuthMiddleware)
+		sub.Use(api.middleware.TokenAuth)
 		sub.Post("/", api.handler.CreateContract)
 
-		sub.Route("/contractID", func(r chi.Router) {
-			r.Use(api.ContractMiddlewareCtx)
-			r.Get("/", api.handler.ReviewsWithContractID)
+		sub.Route("/{id}", func(r chi.Router) {
+			// GET "/" contractByID
+			// GET "/reviews" reviewsByContractID
 		})
 	})
 }
@@ -73,7 +70,7 @@ func (api *api) mountAdminRoutes(r chi.Router) {
 		sys.Get("/health", api.handler.HealthChecker)
 
 		sys.Group(func(admin chi.Router) {
-			admin.Use(api.BasicAuthMiddleware)
+			admin.Use(api.middleware.BasicAuth)
 			// Or use JWT+role for better security in some cases:
 			// admin.Use(api.TokenAuthMiddleware, api.AdminOnly)
 			admin.Get("/debug/vars", expvar.Handler().ServeHTTP)

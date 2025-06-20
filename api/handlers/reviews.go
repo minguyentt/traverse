@@ -5,7 +5,7 @@ import (
 	"traverse/internal/services"
 	"traverse/models"
 	"traverse/pkg/errors"
-	json "traverse/pkg/validator"
+	"traverse/pkg/response"
 )
 
 type ReviewHandler interface {
@@ -29,7 +29,7 @@ func (s *reviewHandler) ReviewsWithContractID(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	if err := json.Response(w, http.StatusOK, reviews); err != nil {
+	if err := response.JSON(w, http.StatusOK, reviews); err != nil {
 		errors.InternalServerErr(w, r, err)
 		return
 	}

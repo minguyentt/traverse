@@ -1,4 +1,4 @@
-package json
+package response
 
 import (
 	"encoding/json"
@@ -23,10 +23,10 @@ func Read(w http.ResponseWriter, r *http.Request, data any) error {
 	return json.NewDecoder(r.Body).Decode(data)
 }
 
-func ErrResponse(w http.ResponseWriter, status int, msg string) error {
+func Error(w http.ResponseWriter, status int, msg string) error {
 	return Write(w, status, &jsonErr{Error: msg})
 }
 
-func Response(w http.ResponseWriter, status int, data any) error {
+func JSON(w http.ResponseWriter, status int, data any) error {
 	return Write(w, status, &jsonResponse{Data: data})
 }

@@ -2,15 +2,18 @@ package cache
 
 import (
 	"context"
+	"errors"
 	"time"
 
 	"github.com/redis/go-redis/v9"
 )
 
+var ErrCacheMiss = errors.New("cache miss")
+
 type Cache interface {
 	Get(ctx context.Context, key string) ([]byte, error)
 	Set(ctx context.Context, key string, payload []byte, ttl time.Duration) error
-	Delete(ctx context.Context, key string)
+	Delete(ctx context.Context, key string) error
 }
 
 type userCache struct {
@@ -24,14 +27,17 @@ func New(client *redis.Client) (Cache, error) {
 }
 
 func (c *userCache) Get(ctx context.Context, userKey string) ([]byte, error) {
-	cmd := c.inner.Get(ctx, userKey)
-	return cmd.Bytes()
+	val, err := c.inner.Get(ctx, userKey).Bytes()
+	if err == redis.Nil {
+		return nil, ErrCacheMiss // your own sentinel error
+	}
+	return val, err
 }
 
 func (c *userCache) Set(ctx context.Context, userKey string, payload []byte, ttl time.Duration) error {
 	return c.inner.Set(ctx, userKey, payload, ttl).Err()
 }
 
-func (c *userCache) Delete(ctx context.Context, userKey string) {
-	c.inner.Del(ctx, userKey)
+func (c *userCache) Delete(ctx context.Context, userKey string) error {
+	return c.inner.Del(ctx, userKey).Err()
 }

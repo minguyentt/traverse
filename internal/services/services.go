@@ -11,7 +11,7 @@ type Service struct {
 	Review ReviewService
 }
 
-func New(storage *storage.Storage, auth auth.Authenticator) *Service {
+func New(storage *storage.Storage, auth auth.TokenAuthenticator) *Service {
 	return &Service{
 		Users: NewUserService(storage, auth),
 		Contract: NewContractService(storage),

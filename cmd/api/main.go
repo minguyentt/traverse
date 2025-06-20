@@ -10,7 +10,6 @@ import (
 	"traverse/internal/assert"
 	"traverse/internal/db"
 	"traverse/internal/db/redis"
-	"traverse/internal/db/redis/cache"
 
 	server "traverse/api"
 
@@ -44,21 +43,17 @@ func main() {
 	defer db.Close()
 
 	// redis client
-	var rdsClient *red.Client
+	var redisClient *red.Client
 	if cfg.REDIS.Enabled {
-		rdsClient = redis.NewClient(cfg.REDIS.Addr, cfg.REDIS.Password, cfg.REDIS.DB)
+		redisClient = redis.NewClient(cfg.REDIS.Addr, cfg.REDIS.Password, cfg.REDIS.DB)
 
 		rdsLogger.Info("established connection with redis client")
-		defer rdsClient.Close()
+		defer redisClient.Close()
 	}
-
-	// redis cache
-	rdsCache, err := cache.New(rdsClient)
-	assert.NoError(err, "error occurred for redis cache", "err", err)
 
 	router := router.New()
 
-	server := server.New(cfg, db, rdsCache, apiLogger)
+	server := server.New(cfg, db, redisClient, apiLogger)
 	assert.NoError(err, "error setting up api routes", "err", err)
 
 	v1API, err := server.SetupAPIV1(ctx, router)
