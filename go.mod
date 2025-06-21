@@ -1,6 +1,6 @@
 module github.com/minguyentt/traverse
 
-go 1.23.1
+go 1.24
 
 toolchain go1.24.0
 

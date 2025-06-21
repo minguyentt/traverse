@@ -1,5 +1,6 @@
-FROM golang:1.23 AS build-stage
+ARG GO_VERSION=1.24
 
+FROM golang:$(GO_VERSION) AS build-stage
 # set destination for COPY
 WORKDIR /app
 
@@ -10,15 +11,13 @@ RUN go mod download
 # copy source code
 COPY . .
 
-RUN CGO_ENABLED=0 GOOS=linux go build -o /api ./cmd/api
+RUN CGO_ENABLED=0 GOOS=linux go build -o /bin/api ./cmd/api
 
 FROM scratch AS build-release-stage
 
-WORKDIR /app
+COPY --from=build-stage /bin/api /bin/api
 
-COPY --from=build-stage /api /api
+EXPOSE 80
 
-EXPOSE 8080
-
-CMD ["/api"]
+CMD ["/bin/api"]
 
