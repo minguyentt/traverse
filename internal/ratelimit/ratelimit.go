@@ -4,6 +4,7 @@ import (
 	"log/slog"
 	"sync"
 	"time"
+
 	"github.com/minguyentt/traverse/configs"
 )
 
@@ -17,59 +18,34 @@ type RateLimiter struct {
 	numWin int
 
 	ticker *time.Ticker
-	logger *slog.Logger
 	mu     sync.RWMutex
+	logger *slog.Logger
 
 	currentIdx int
 }
 
-func New(opts *configs.RateLimitConfig, logger *slog.Logger) *RateLimiter {
-	if opts == nil {
-		return runTester()
-	}
-
+func New(cfg *configs.RateLimitOpts) *RateLimiter {
+	l := slog.Default()
 	r := &RateLimiter{
-		ticker:     time.NewTicker(opts.Window),
-		buckets:    opts.Buckets,
-		depth:      opts.Depth,
-		limit:      opts.Limit,
-		window:     opts.Window,
-		numWin:     opts.NumWin,
-		logger:     logger,
+		ticker:     time.NewTicker(cfg.Window),
+		buckets:    cfg.Buckets,
+		depth:      cfg.Depth,
+		limit:      cfg.Limit,
+		window:     cfg.Window,
+		numWin:     cfg.NumWin,
+		logger: l,
 		currentIdx: 0,
 	}
 
-	r.sketches = make([]*countMinSketch, opts.NumWin)
-	for i := range opts.NumWin {
-		cms, _ := NewCMS(opts.Buckets, opts.Depth)
+	r.sketches = make([]*countMinSketch, cfg.NumWin)
+	for i := range cfg.NumWin {
+		cms, _ := NewCMS(cfg.Buckets, cfg.Depth)
 		r.sketches[i] = cms
 	}
 
 	go r.Rotate()
 
 	return r
-}
-
-func runTester() *RateLimiter {
-	rl := &RateLimiter{
-		ticker:     time.NewTicker(time.Second),
-		buckets:    1000,
-		depth:      3,
-		limit:      10,
-		window:     time.Second,
-		numWin:     3,
-		currentIdx: 0,
-	}
-
-	rl.sketches = make([]*countMinSketch, rl.numWin)
-	for i := range rl.numWin {
-		cms, _ := NewCMS(rl.buckets, rl.depth)
-		rl.sketches[i] = cms
-	}
-
-	go rl.Rotate()
-
-	return rl
 }
 
 func (r *RateLimiter) Rotate() {
@@ -100,4 +76,8 @@ func (r *RateLimiter) Update(key string) bool {
 	r.mu.RUnlock()
 	r.logger.Warn("estimated count update", "key", key, "count", count)
 	return count <= uint64(r.limit)
+}
+
+func (r *RateLimiter) StopTicker() {
+	r.ticker.Stop()
 }

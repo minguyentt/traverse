@@ -5,13 +5,14 @@ import (
 	"log/slog"
 	"os"
 	"time"
+
+	"github.com/joho/godotenv"
+	"github.com/minguyentt/traverse/api"
 	"github.com/minguyentt/traverse/api/router"
 	"github.com/minguyentt/traverse/configs"
 	"github.com/minguyentt/traverse/internal/assert"
 	"github.com/minguyentt/traverse/internal/db"
 	"github.com/minguyentt/traverse/internal/db/redis"
-
-	server "github.com/minguyentt/traverse/api"
 
 	"github.com/lmittmann/tint"
 	red "github.com/redis/go-redis/v9"
@@ -20,6 +21,8 @@ import (
 func main() {
 	ctx := context.Background()
 
+	err := godotenv.Load()
+	assert.NoError(err, "failed to load environment variables", "msg", err)
 	// loading configs
 	cfg := configs.Env
 
@@ -53,7 +56,7 @@ func main() {
 
 	router := router.New()
 
-	server := server.New(cfg, db, redisClient, apiLogger)
+	server := api.New(cfg, db, redisClient, apiLogger)
 	assert.NoError(err, "error setting up api routes", "err", err)
 
 	v1API, err := server.SetupAPIV1(ctx, router)

@@ -1,4 +1,4 @@
-package server
+package api
 
 import (
 	"context"
@@ -67,9 +67,9 @@ func (s *server) SetupAPIV1(
 ) (*api, error) {
 	// wiring api deps
 
-	rlcfg := configs.RateLimitType("standard")
+	rlcfg := configs.Env.RATELIMIT.Standard
 	// rate limiter
-	ratelimiter := ratelimit.New(rlcfg, s.logger.With("area", "rate limiter"))
+	ratelimiter := ratelimit.New(rlcfg)
 
 	rdsCache, err := cache.New(s.redis)
 	assert.NoError(err, "failed to create new redis cache")

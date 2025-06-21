@@ -2,13 +2,9 @@ package configs
 
 import (
 	"fmt"
-	"log"
 	"os"
 	"regexp"
 	"time"
-	"github.com/minguyentt/traverse/internal/assert"
-
-	"github.com/joho/godotenv"
 )
 
 const projectDir = "traverse" // change to project name directory
@@ -20,6 +16,7 @@ type Config struct {
 	DEV_DB     *Local_DBConfig
 	AUTH       *AuthConfig
 	REDIS      *RedisConfig
+	RATELIMIT  *RateLimitConfig
 }
 
 type AuthConfig struct {
@@ -75,6 +72,12 @@ type RedisConfig struct {
 }
 
 type RateLimitConfig struct {
+	Standard *RateLimitOpts
+	Test     *RateLimitOpts
+	Enabled  bool
+}
+
+type RateLimitOpts struct {
 	Buckets uint
 	Depth   uint
 
@@ -86,12 +89,6 @@ type RateLimitConfig struct {
 var Env = LoadEnvs()
 
 func LoadEnvs() *Config {
-	err := godotenv.Load()
-	if err != nil {
-		log.Fatalf("failed to load environment variables")
-	}
-	assert.NoError(err, "failed to load environment variables", "msg", err)
-
 	return &Config{
 		MIGRATIONS: &MigrationConfig{
 			DIR: getEnv("MIGRATION_DIR"),
@@ -134,31 +131,23 @@ func LoadEnvs() *Config {
 			DB:       0,
 			Enabled:  true,
 		},
+		RATELIMIT: &RateLimitConfig{
+			Standard: &RateLimitOpts{
+				Buckets: 10000,
+				Depth:   4,
+				Limit:   100,
+				Window:  time.Minute,
+				NumWin:  5,
+			},
+			Test: &RateLimitOpts{
+				Buckets: 1000,
+				Depth:   3,
+				Limit:   10,
+				Window:  time.Second,
+				NumWin:  3,
+			},
+		},
 	}
-}
-
-func RateLimitType(t string) *RateLimitConfig {
-	if t == "standard" {
-		return &RateLimitConfig{
-			Buckets: 10000,
-			Depth:   4,
-			Limit:   100,
-			Window:  time.Minute,
-			NumWin:  5,
-		}
-	}
-
-	if t == "high_traffic" {
-		return &RateLimitConfig{
-			Buckets: 50000,
-			Depth:   5,
-			Limit:   500,
-			Window:  time.Minute,
-			NumWin:  3,
-		}
-	}
-
-	return nil
 }
 
 func (c *DBConfig) String() string {
