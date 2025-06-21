@@ -1,8 +1,8 @@
 package services
 
 import (
-	"traverse/internal/auth"
-	"traverse/internal/storage"
+	"github.com/minguyentt/traverse/internal/auth"
+	"github.com/minguyentt/traverse/internal/storage"
 )
 
 type Service struct {

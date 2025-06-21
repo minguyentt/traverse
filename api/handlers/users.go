@@ -3,9 +3,9 @@ package handlers
 import (
 	"net/http"
 	"strconv"
-	"traverse/internal/services"
-	"traverse/pkg/errors"
-	"traverse/pkg/response"
+	"github.com/minguyentt/traverse/internal/services"
+	"github.com/minguyentt/traverse/pkg/errors"
+	"github.com/minguyentt/traverse/pkg/response"
 
 	"github.com/go-chi/chi/v5"
 )

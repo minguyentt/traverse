@@ -6,7 +6,7 @@ import (
 	"hash"
 	"hash/fnv"
 	"math"
-	"traverse/internal/assert"
+	"github.com/minguyentt/traverse/internal/assert"
 )
 
 /*

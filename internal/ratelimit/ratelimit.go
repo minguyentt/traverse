@@ -4,7 +4,7 @@ import (
 	"log/slog"
 	"sync"
 	"time"
-	"traverse/configs"
+	"github.com/minguyentt/traverse/configs"
 )
 
 type RateLimiter struct {

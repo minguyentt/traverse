@@ -5,7 +5,7 @@ import (
 	"os"
 	"strconv"
 	"time"
-	"traverse/internal/assert"
+	"github.com/minguyentt/traverse/internal/assert"
 )
 
 func getEnv(key string) string {

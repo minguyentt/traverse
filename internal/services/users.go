@@ -5,10 +5,10 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"time"
-	cfg "traverse/configs"
-	"traverse/internal/auth"
-	"traverse/internal/storage"
-	"traverse/models"
+	cfg "github.com/minguyentt/traverse/configs"
+	"github.com/minguyentt/traverse/internal/auth"
+	"github.com/minguyentt/traverse/internal/storage"
+	"github.com/minguyentt/traverse/models"
 
 	"github.com/golang-jwt/jwt/v5"
 )

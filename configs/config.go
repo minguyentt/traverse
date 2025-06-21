@@ -6,7 +6,7 @@ import (
 	"os"
 	"regexp"
 	"time"
-	"traverse/internal/assert"
+	"github.com/minguyentt/traverse/internal/assert"
 
 	"github.com/joho/godotenv"
 )

@@ -2,8 +2,8 @@ package services
 
 import (
 	"context"
-	"traverse/internal/storage"
-	"traverse/models"
+	"github.com/minguyentt/traverse/internal/storage"
+	"github.com/minguyentt/traverse/models"
 )
 
 type ContractService interface {

@@ -2,7 +2,7 @@ package services
 
 import (
 	"context"
-	"traverse/models"
+	"github.com/minguyentt/traverse/models"
 )
 
 func (s *contractService) ReviewsWithContractID(ctx context.Context, cID int64) ([]models.Review, error) {

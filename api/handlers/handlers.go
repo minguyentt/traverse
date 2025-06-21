@@ -2,8 +2,8 @@ package handlers
 
 import (
 	"log/slog"
-	"traverse/internal/db/redis/cache"
-	"traverse/internal/services"
+	"github.com/minguyentt/traverse/internal/db/redis/cache"
+	"github.com/minguyentt/traverse/internal/services"
 
 	"github.com/go-playground/validator/v10"
 )

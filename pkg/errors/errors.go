@@ -3,7 +3,7 @@ package errors
 import (
 	"log/slog"
 	"net/http"
-	"traverse/pkg/response"
+	"github.com/minguyentt/traverse/pkg/response"
 )
 
 func InternalServerErr(w http.ResponseWriter, r *http.Request, err error) {

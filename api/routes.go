@@ -4,7 +4,7 @@ import (
 	"expvar"
 	"net/http"
 	"time"
-	"traverse/configs"
+	"github.com/minguyentt/traverse/configs"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"

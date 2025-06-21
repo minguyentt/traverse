@@ -5,7 +5,7 @@ import (
 	"log/slog"
 	"sync"
 	"time"
-	"traverse/internal/tracer"
+	"github.com/minguyentt/traverse/internal/tracer"
 
 	"github.com/exaring/otelpgx"
 	"github.com/jackc/pgx/v5"

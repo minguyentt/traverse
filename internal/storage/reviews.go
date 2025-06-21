@@ -2,8 +2,8 @@ package storage
 
 import (
 	"context"
-	"traverse/internal/db"
-	"traverse/models"
+	"github.com/minguyentt/traverse/internal/db"
+	"github.com/minguyentt/traverse/models"
 )
 
 type ReviewStorage interface {

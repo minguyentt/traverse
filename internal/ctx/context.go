@@ -3,7 +3,7 @@ package ctx
 import (
 	"context"
 	"net/http"
-	"traverse/models"
+	"github.com/minguyentt/traverse/models"
 )
 
 func SetUser(r *http.Request, key string, val any) context.Context {

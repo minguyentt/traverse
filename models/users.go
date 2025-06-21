@@ -2,7 +2,7 @@ package models
 
 import (
 	"time"
-	"traverse/internal/auth"
+	"github.com/minguyentt/traverse/internal/auth"
 )
 
 type User struct {

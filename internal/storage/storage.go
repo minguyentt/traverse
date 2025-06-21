@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 	"time"
-	"traverse/internal/db"
+	"github.com/minguyentt/traverse/internal/db"
 
 	"github.com/jackc/pgx/v5"
 )

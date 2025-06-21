@@ -6,9 +6,9 @@ import (
 	"log"
 	"math/rand"
 	"time"
-	"traverse/internal/db"
-	"traverse/internal/storage"
-	"traverse/models"
+	"github.com/minguyentt/traverse/internal/db"
+	"github.com/minguyentt/traverse/internal/storage"
+	"github.com/minguyentt/traverse/models"
 )
 
 var usernames = []string{

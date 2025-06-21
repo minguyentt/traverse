@@ -3,8 +3,8 @@ package storage
 import (
 	"context"
 	"fmt"
-	"traverse/internal/db"
-	"traverse/models"
+	"github.com/minguyentt/traverse/internal/db"
+	"github.com/minguyentt/traverse/models"
 
 	"github.com/jackc/pgx/v5"
 )
