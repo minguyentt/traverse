@@ -51,8 +51,9 @@ func (api *api) mountContractRoutes(r chi.Router) {
 		sub.Post("/", api.handler.CreateContract)
 
 		sub.Route("/{id}", func(r chi.Router) {
-			// GET "/" contractByID
-			// GET "/reviews" reviewsByContractID
+			r.Use(api.middleware.TokenAuth)
+			r.Use(api.middleware.LoadContractCtx)
+			r.Get("/reviews", api.handler.ContractByID)
 		})
 	})
 

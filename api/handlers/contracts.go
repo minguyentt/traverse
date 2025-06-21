@@ -44,36 +44,14 @@ func NewContract(cs services.ContractService, v *validator.Validate, c cache.Red
 }
 
 func (h *contract) ContractByID(w http.ResponseWriter, r *http.Request) {
-	usr := ctx.GetUserFromCTX(r)
-
-	id := utils.Int64ToStr(usr.ID)
-	key := fmt.Sprintf("user-%s:contract", id)
-	if data, err := h.cache.Get(r.Context(), key); err == nil {
-		var contract *models.Contract
-		if err := utils.Unmarshal(data, &contract); err == nil {
-
-			if err := response.JSON(w, http.StatusOK, contract); err != nil {
-				errors.InternalServerErr(w, r, err)
-			}
-			return
-		}
-	} else if err != cache.ErrCacheMiss {
-		errors.InternalServerErr(w, r, err)
-		return
-	}
-
-	contract, err := h.service.ContractByID(r.Context(), usr.ID)
+	contract := ctx.GetContractFromCTX(r, "contract")
+	reviews, err := h.service.ReviewsWithContractID(r.Context(), contract.ID)
 	if err != nil {
 		errors.InternalServerErr(w, r, err)
 		return
 	}
 
-	bytes, err := utils.Marshal(contract)
-	if err == nil {
-		_ = h.cache.Set(r.Context(), key, bytes, 2*time.Minute)
-	} else {
-		h.logger.Warn("failed to marshal data to bytes for cache", "context", key, "err", err)
-	}
+	contract.Reviews = reviews
 
 	if err := response.JSON(w, http.StatusOK, contract); err != nil {
 		errors.InternalServerErr(w, r, err)
@@ -82,7 +60,7 @@ func (h *contract) ContractByID(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *contract) Feed(w http.ResponseWriter, r *http.Request) {
-	usr := ctx.GetUserFromCTX(r)
+	usr := ctx.GetUserFromCTX(r, "user")
 
 	id := strconv.FormatInt(usr.ID, 10)
 	cacheKeyFeed := fmt.Sprintf("user-%s:feed", id)
@@ -142,7 +120,7 @@ func (h *contract) CreateContract(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	usr := ctx.GetUserFromCTX(r)
+	usr := ctx.GetUserFromCTX(r, "user")
 
 	c, err := h.service.CreateContract(r.Context(), &contractPayload, usr.ID)
 	if err != nil {
@@ -158,7 +136,7 @@ func (h *contract) CreateContract(w http.ResponseWriter, r *http.Request) {
 
 func (h *contract) UpdateContract(w http.ResponseWriter, r *http.Request) {
 	// get contract from ctx
-	con := ctx.GetContractFromCTX(r)
+	con := ctx.GetContractFromCTX(r, "contract")
 
 	var pl models.UpdateContractPayload
 

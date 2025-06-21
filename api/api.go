@@ -87,7 +87,7 @@ func (s *server) SetupAPIV1(
 
 	handlers := handlers.New(&deps, s.logger)
 
-	mw := middlewares.New(jwt, service.Users, ratelimiter, s.logger)
+	mw := middlewares.New(jwt, service, ratelimiter, s.logger)
 
 	assert.NotNil(handlers, "nil encounter")
 	assert.NotNil(service, "nil encounter")

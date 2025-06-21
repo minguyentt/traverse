@@ -109,7 +109,7 @@ func (s *contractStore) ByID(ctx context.Context, cID int64) (*models.Contract, 
 		ctx,
 		query,
 		cID,
-	).Scan(&c.ID, c.UserID, c.JobTitle, c.City, c.Agency, c.CreatedAt, c.UpdatedAt, c.Version)
+	).Scan(&c.ID, &c.UserID, &c.JobTitle, &c.City, &c.Agency, &c.CreatedAt, &c.UpdatedAt, &c.Version)
 	if err != nil {
 		switch err {
 		case pgx.ErrNoRows:

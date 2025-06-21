@@ -6,10 +6,10 @@ import (
 	"traverse/models"
 )
 
-//TODO: maybe i should pass in the logger for every service...
 type ContractService interface {
 	CreateContract(ctx context.Context, cpl *models.ContractPayload, userID int64) (*models.Contract, error)
-	ContractByID(ctx context.Context, userID int64) (*models.Contract, error)
+	ContractByID(ctx context.Context, cID int64) (*models.Contract, error)
+	ReviewsWithContractID(ctx context.Context, cID int64) ([]models.Review, error)
 	GetAllContracts(ctx context.Context, userID int64) ([]models.ContractMetaData, error)
 	UpdateContract(ctx context.Context, cpl *models.Contract) error
 	DeleteContract(ctx context.Context, cID int64) error
@@ -74,8 +74,8 @@ func (s *contractService) GetAllContracts(ctx context.Context, userID int64) ([]
 	return contracts, nil
 }
 
-func (s *contractService) ContractByID(ctx context.Context, userID int64) (*models.Contract, error) {
-	contract, err := s.store.Contracts.ByID(ctx, userID)
+func (s *contractService) ContractByID(ctx context.Context, cID int64) (*models.Contract, error) {
+	contract, err := s.store.Contracts.ByID(ctx, cID)
 	if err != nil {
 		return nil, err
 	}

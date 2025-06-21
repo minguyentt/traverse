@@ -9,9 +9,7 @@ type ContractMetaData struct {
 }
 
 type Contract struct {
-	// ID of the contract
-	ID int64 `json:"id"`
-	// userID tied to the created contract
+	ID         int64               `json:"id"`
 	UserID     int64               `json:"user_id"`
 	JobTitle   string              `json:"job_title"`
 	City       string              `json:"city"`

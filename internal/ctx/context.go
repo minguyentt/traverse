@@ -6,32 +6,26 @@ import (
 	"traverse/models"
 )
 
-type userKey struct{}
-
-type feedKey struct{}
-
-type contractKey struct{}
-
-func SetUser(r *http.Request, user any) context.Context {
-	return context.WithValue(r.Context(), userKey{}, user)
+func SetUser(r *http.Request, key string, val any) context.Context {
+	return context.WithValue(r.Context(), key, val)
 }
 
-func GetUserFromCTX(r *http.Request) *models.User {
-	return r.Context().Value(userKey{}).(*models.User)
+func GetUserFromCTX(r *http.Request, key string) *models.User {
+	return r.Context().Value(key).(*models.User)
 }
 
-func SetContract(r *http.Request, user any) context.Context {
-	return context.WithValue(r.Context(), userKey{}, user)
+func SetContract(r *http.Request, key string, val any) context.Context {
+	return context.WithValue(r.Context(), key, val)
 }
 
-func GetContractFromCTX(r *http.Request) *models.Contract {
-	return r.Context().Value(contractKey{}).(*models.Contract)
+func GetContractFromCTX(r *http.Request, key string) *models.Contract {
+	return r.Context().Value(key).(*models.Contract)
 }
 
-func SetGlobalFeed(r *http.Request, user any) context.Context {
-	return context.WithValue(r.Context(), feedKey{}, user)
+func SetGlobalFeed(r *http.Request, key string, val any) context.Context {
+	return context.WithValue(r.Context(), key, val)
 }
 
-func GetGlobalFeedFromCTX(r *http.Request) []models.ContractMetaData {
-	return r.Context().Value(contractKey{}).([]models.ContractMetaData)
+func GetGlobalFeedFromCTX(r *http.Request, key string) []models.ContractMetaData {
+	return r.Context().Value(key).([]models.ContractMetaData)
 }

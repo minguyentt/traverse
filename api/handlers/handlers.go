@@ -24,7 +24,6 @@ type Handlers struct {
 	AuthHandler
 	UsersHandler
 	ContractHandler
-	ReviewHandler
 }
 
 // TODO: i dont like this constructor for handlers
@@ -34,6 +33,5 @@ func New(deps *HandlerDeps, l *slog.Logger) *Handlers {
 		NewAuthHandler(deps.Service.Users, deps.Validator, deps.Cache, l.With("area", "auth")),
 		NewUserHandler(deps.Service.Users),
 		NewContract(deps.Service.Contract, deps.Validator, deps.Cache, l.With("area", "contract")),
-		NewReviewHandler(deps.Service.Review),
 	}
 }

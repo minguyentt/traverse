@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 	"traverse/configs"
@@ -13,19 +14,22 @@ import (
 	"traverse/internal/ctx"
 	"traverse/internal/ratelimit"
 	"traverse/internal/services"
+	"traverse/internal/storage"
 	"traverse/models"
 	"traverse/pkg/errors"
+
+	"github.com/go-chi/chi/v5"
 )
 
 type Middleware struct {
 	// figure out what the mw deps are
 	auth.TokenAuthenticator
-	services.UserService
+	*services.Service
 	*ratelimit.RateLimiter
 	logger *slog.Logger
 }
 
-func New(jwt auth.TokenAuthenticator, serv services.UserService, rl *ratelimit.RateLimiter, logger *slog.Logger) *Middleware {
+func New(jwt auth.TokenAuthenticator, serv *services.Service, rl *ratelimit.RateLimiter, logger *slog.Logger) *Middleware {
 	return &Middleware{
 		jwt,
 		serv,
@@ -47,6 +51,35 @@ func (m *Middleware) RateLimiterWithCMS(next http.Handler) http.Handler {
 	})
 }
 
+func (m *Middleware) LoadContractCtx(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		idStr := chi.URLParam(r, "id")
+		if idStr == "" {
+			errors.BadRequestResponse(w, r, fmt.Errorf("missing contract ID"))
+			return
+		}
+
+		contractID, err := strconv.ParseInt(idStr, 10, 64)
+		if err != nil {
+			errors.BadRequestResponse(w, r, fmt.Errorf("invalid contract ID: %w", err))
+			return
+		}
+
+		contract, err := m.Contract.ContractByID(r.Context(), contractID)
+		if err != nil {
+			if err == storage.ErrNotFound {
+				errors.NotFoundRequest(w, r, err)
+			} else {
+				errors.InternalServerErr(w, r, err)
+			}
+			return
+		}
+
+		ctx := ctx.SetContract(r, "contract", contract)
+		next.ServeHTTP(w, r.WithContext(ctx))
+	})
+}
+
 func (m *Middleware) TokenAuth(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		userID, err := m.Authenticate(r.Context(), r)
@@ -63,13 +96,13 @@ func (m *Middleware) TokenAuth(next http.Handler) http.Handler {
 		}
 
 		// save the user context when user is logged in
-		ctx := ctx.SetUser(r, user)
+		ctx := ctx.SetUser(r, "user", user)
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }
 
 func (m *Middleware) getUserFromRequest(ctx context.Context, id int64) (*models.User, error) {
-	user, err := m.UserByID(ctx, id)
+	user, err := m.Users.UserByID(ctx, id)
 	if err != nil {
 		return nil, err
 	}
@@ -123,17 +156,6 @@ func (m *Middleware) LoggerMiddleware(next http.Handler) http.Handler {
 		)
 	})
 }
-
-// func (m *Middleware) RequireActivated(next http.Handler) http.Handler {
-// 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-// 		user, ok := r.Context().Value(auth.UserCtxKey).(*models.User)
-// 		if !ok || user == nil || !user.Activated {
-// 			http.Error(w, "account not activated", http.StatusForbidden)
-// 			return
-// 		}
-// 		next.ServeHTTP(w, r)
-// 	})
-// }
 
 // response wrapper for log middleware
 type response struct {
