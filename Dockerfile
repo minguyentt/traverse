@@ -11,13 +11,13 @@ RUN go mod download
 # copy source code
 COPY . .
 
-RUN CGO_ENABLED=0 GOOS=linux go build -o /bin/api ./cmd/api
+RUN CGO_ENABLED=0 GOOS=linux go build -o ./bin/api ./cmd/api
 
 FROM scratch AS build-release-stage
 
-COPY --from=build-stage /bin/api /bin/api
+COPY --from=build-stage ./bin/api ./bin/api
 
-EXPOSE 80
+EXPOSE 8080
 
-CMD ["/bin/api"]
+CMD ["./bin/api"]
 
