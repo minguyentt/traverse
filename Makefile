@@ -1,12 +1,7 @@
 include .env
 
-# For local development
-LOCAL_DSN=user=$(LOCAL_DB_USER) password=$(LOCAL_DB_PASSWORD) dbname=$(LOCAL_DB_NAME) host=$(LOCAL_DB_HOST) port=$(LOCAL_DB_PORT) sslmode=disable
-
-MIGRATIONS_DIR = $(MIGRATION_DIR)
-
 # Phony targets
-.PHONY: migrate-up migrate-down migrate-create migrate-fix migrate-status migrate-reset migrate-validate
+.PHONY: help migrate-up migrate-down migrate-create migrate-fix migrate-status migrate-reset
 
 build:
 	@go build -o traverse ./cmd/api
@@ -14,24 +9,34 @@ build:
 run-api: build
 	@./traverse
 
+help:
+	@echo "Goose Makefile Targets:"
+	@echo "  migrate-create <migration_name>  	- Create a new SQL migration file."
+	@echo "  migrate-up                     	- Apply all pending migrations."
+	@echo "  migrate-down                   	- Roll back the last applied migration."
+	@echo "  migrate-reset                 	- Roll back all migrations (use with caution!)."
+	@echo "  migrate-status                 	- Show the status of migrations."
+
 migrate-create:
-	@goose -dir $(MIGRATIONS_DIR) $(DB_DRIVER) "$(LOCAL_DSN)" create $(filter-out $@,$(MAKECMDGOALS)) sql
+	@goose -dir $(MIGRATION_DIR) $(DB_DRIVER) "$(DSN)" create $(filter-out $@,$(MAKECMDGOALS)) sql
 
 migrate-up:
-	@goose -dir $(MIGRATIONS_DIR) $(DB_DRIVER) "$(LOCAL_DSN)" up
+	@goose -dir $(MIGRATION_DIR) $(DB_DRIVER) "$(DSN)" up
 
 migrate-down:
-	@goose -dir $(MIGRATIONS_DIR) $(DB_DRIVER) "$(LOCAL_DSN)" down
+	@goose -dir $(MIGRATION_DIR) $(DB_DRIVER) "$(DSN)" down
 
 migrate-status:
-	@goose -dir $(MIGRATIONS_DIR) $(DB_DRIVER) "$(LOCAL_DSN)" status
+	@goose -dir $(MIGRATION_DIR) $(DB_DRIVER) "$(DSN)" status
 
 migrate-reset:
-	@goose -dir $(MIGRATIONS_DIR) $(DB_DRIVER) "$(LOCAL_DSN)" reset
+	@echo "WARNING: This will roll back ALL migrations. Are you sure? (y/N)"
+	@read -r CONFIRM; \
+		if [ "$$CONFIRM" = "y" ]; then \
+		@goose -dir $(MIGRATION_DIR) $(DB_DRIVER) "$(DSN)" reset
+	else \
+		echo "Operation to reset migration cancelled."; \
+		fi
 
 migrate-fix:
-	@goose -dir $(MIGRATIONS_DIR) $(DB_DRIVER) "$(LOCAL_DSN)" fix
-
-migrate-validate:
-	@goose -dir $(MIGRATIONS_DIR) $(DB_DRIVER) "$(LOCAL_DSN)" validate
-
+	@goose -dir $(MIGRATION_DIR) $(DB_DRIVER) "$(DSN)" fix

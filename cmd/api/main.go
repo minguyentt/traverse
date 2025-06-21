@@ -38,7 +38,7 @@ func main() {
 	rdsLogger := logger.With("area", "redis")
 
 	// setting up pool connections for db
-	db, err := db.NewPoolConn(ctx, cfg.DEV_DB.String(), dbLogger)
+	db, err := db.NewPoolConn(ctx, cfg.DB.String(), dbLogger)
 	assert.NoError(err, "pool conn error", "msg", err)
 	defer db.Close()
 
