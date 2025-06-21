@@ -149,12 +149,13 @@ func (s *contractStore) All(
 	// 3. left join the reviews table ON reviews.contract_id = contract.id
 	// 4. left join the users ON contract.user_id = user.id
 	query := `
-	SELECT con.id, con.user_id, con.job_title, con.city, con.agency, u.username, con.version, con.created_at,
+	SELECT con.id, con.user_id, con.job_title, con.city, con.agency,
+	u.id, u.firstname, u.username, u.email, con.version, con.created_at,
 	COUNT(r.id) AS reviews_count
 	FROM contracts con
 	LEFT JOIN reviews r ON r.contract_id = con.id
 	LEFT JOIN users u ON con.user_id = u.id
-	GROUP BY con.id, u.username, con.created_at
+	GROUP BY con.id, u.id, u.username, con.created_at
 	`
 
 	ctx, cancel := context.WithTimeout(ctx, QueryTimeoutDuration)
@@ -174,7 +175,10 @@ func (s *contractStore) All(
 			&c.JobTitle,
 			&c.City,
 			&c.Agency,
+			&c.User.ID,
+			&c.User.Firstname,
 			&c.User.Username,
+			&c.User.Email,
 			&c.Version,
 			&c.CreatedAt,
 			&c.ReviewCounts,

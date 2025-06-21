@@ -34,7 +34,7 @@ func main() {
 	))
 
 	dbLogger := logger.With("area", "pgx")
-	apiLogger := logger.With("area", "API")
+	apiLogger := logger.WithGroup("API")
 	rdsLogger := logger.With("area", "redis")
 
 	// setting up pool connections for db

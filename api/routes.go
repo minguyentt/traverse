@@ -41,7 +41,6 @@ func (api *api) mountUserRoutes(r chi.Router) {
 		user.Use(api.middleware.TokenAuth)
 		user.Put("/activate", api.handler.ActivateUser)
 
-		user.Get("/feed", api.handler.Feed)
 		user.Get("/{userID}", api.handler.GetUser)
 	})
 
@@ -55,7 +54,7 @@ func (api *api) mountUserRoutes(r chi.Router) {
 }
 
 func (api *api) mountContractRoutes(r chi.Router) {
-	r.Route("/contracts", func(sub chi.Router) {
+	r.Route("/contract", func(sub chi.Router) {
 		sub.Use(api.middleware.TokenAuth)
 		sub.Post("/", api.handler.CreateContract)
 
@@ -63,6 +62,11 @@ func (api *api) mountContractRoutes(r chi.Router) {
 			// GET "/" contractByID
 			// GET "/reviews" reviewsByContractID
 		})
+	})
+
+	r.Route("/feed", func(sub chi.Router) {
+		sub.Use(api.middleware.TokenAuth)
+		sub.Get("/", api.handler.Feed)
 	})
 }
 

@@ -1,12 +1,18 @@
 package handlers
 
 import (
+	"fmt"
+	"log/slog"
 	"net/http"
 	"strconv"
+	"time"
+	"traverse/internal/ctx"
+	"traverse/internal/db/redis/cache"
 	"traverse/internal/services"
 	"traverse/models"
 	"traverse/pkg/errors"
 	"traverse/pkg/response"
+	"traverse/pkg/utils"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-playground/validator/v10"
@@ -23,26 +29,58 @@ type ContractHandler interface {
 type contract struct {
 	service  services.ContractService
 	validate *validator.Validate
+	cache    cache.Redis
+	logger   *slog.Logger
 }
 
-func NewContract(cs services.ContractService, v *validator.Validate) *contract {
+func NewContract(cs services.ContractService, v *validator.Validate, c cache.Redis, logger *slog.Logger) *contract {
+	l := logger.With("area", "contracts")
 	return &contract{
 		service:  cs,
 		validate: v,
+		cache:    c,
+		logger:   l,
 	}
 }
 
 func (h *contract) Feed(w http.ResponseWriter, r *http.Request) {
-	ctx := r.Context()
-	usr := r.Context().Value("user").(*models.User)
+	usr := ctx.GetUserFromCTX(r)
 
-	data, err := h.service.GetAllContracts(ctx, usr.ID)
+	id := strconv.FormatInt(usr.ID, 10)
+	cacheKeyFeed := fmt.Sprintf("feed:user:%d", id)
+
+	// 1. try getting feed from cache
+	data, err := h.cache.Get(r.Context(), cacheKeyFeed)
+	if err == nil {
+		var contracts []*models.ContractMetaData
+		if err := utils.Unmarshal(data, &contracts); err == nil {
+
+			if err := response.JSON(w, http.StatusOK, err); err != nil {
+				errors.InternalServerErr(w, r, err)
+			}
+			return
+		}
+	} else if err != cache.ErrCacheMiss {
+		errors.InternalServerErr(w, r, err)
+		return
+	}
+
+	// 2. cache miss = call the DB
+	contracts, err := h.service.GetAllContracts(r.Context(), usr.ID)
 	if err != nil {
 		errors.InternalServerErr(w, r, err)
 		return
 	}
 
-	if err := response.JSON(w, http.StatusOK, data); err != nil {
+	// 3. cache the feed
+	bytes, err := utils.Marshal(contracts)
+	if err == nil {
+		_ = h.cache.Set(r.Context(), cacheKeyFeed, bytes, 30*time.Second)
+	} else {
+		h.logger.Warn("failed to marshal data to bytes for cache", "context", cacheKeyFeed, "err", err)
+	}
+
+	if err := response.JSON(w, http.StatusOK, contracts); err != nil {
 		errors.InternalServerErr(w, r, err)
 		return
 	}
@@ -63,10 +101,9 @@ func (h *contract) CreateContract(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ctx := r.Context()
-	usr := r.Context().Value("user").(*models.User)
+	usr := ctx.GetUserFromCTX(r)
 
-	c, err := h.service.CreateContract(ctx, &contractPayload, usr.ID)
+	c, err := h.service.CreateContract(r.Context(), &contractPayload, usr.ID)
 	if err != nil {
 		errors.InternalServerErr(w, r, err)
 		return
@@ -80,7 +117,7 @@ func (h *contract) CreateContract(w http.ResponseWriter, r *http.Request) {
 
 func (h *contract) UpdateContract(w http.ResponseWriter, r *http.Request) {
 	// get contract from ctx
-	con := r.Context().Value("contract_id").(*models.Contract)
+	con := ctx.GetContractFromCTX(r)
 
 	var pl models.UpdateContractPayload
 

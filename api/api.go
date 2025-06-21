@@ -43,7 +43,7 @@ type api struct {
 	mux        *router.Router
 	handler    *handlers.Handlers
 	middleware *middlewares.Middleware
-	cache      cache.Cache
+	cache      cache.Redis
 }
 
 func New(
@@ -80,7 +80,7 @@ func (s *server) SetupAPIV1(
 		Cache:     rdsCache,
 	}
 
-	handlers := handlers.New(&deps)
+	handlers := handlers.New(&deps, s.logger)
 
 	mw := middlewares.New(jwt, service.Users, s.logger)
 

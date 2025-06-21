@@ -25,10 +25,10 @@ type AuthHandler interface {
 type authHandler struct {
 	service  services.UserService
 	validate *validator.Validate
-	cache    cache.Cache
+	cache    cache.Redis
 }
 
-func NewAuthHandler(s services.UserService, v *validator.Validate, c cache.Cache) *authHandler {
+func NewAuthHandler(s services.UserService, v *validator.Validate, c cache.Redis) *authHandler {
 	return &authHandler{
 		service:  s,
 		validate: v,

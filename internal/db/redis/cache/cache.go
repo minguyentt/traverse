@@ -10,7 +10,7 @@ import (
 
 var ErrCacheMiss = errors.New("cache miss")
 
-type Cache interface {
+type Redis interface {
 	Get(ctx context.Context, key string) ([]byte, error)
 	Set(ctx context.Context, key string, payload []byte, ttl time.Duration) error
 	Delete(ctx context.Context, key string) error
@@ -20,7 +20,7 @@ type userCache struct {
 	inner *redis.Client
 }
 
-func New(client *redis.Client) (Cache, error) {
+func New(client *redis.Client) (Redis, error) {
 	return &userCache{
 		inner: client,
 	}, client.Ping(context.Background()).Err()
@@ -41,3 +41,4 @@ func (c *userCache) Set(ctx context.Context, userKey string, payload []byte, ttl
 func (c *userCache) Delete(ctx context.Context, userKey string) error {
 	return c.inner.Del(ctx, userKey).Err()
 }
+

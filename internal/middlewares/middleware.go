@@ -10,6 +10,7 @@ import (
 	"time"
 	"traverse/configs"
 	"traverse/internal/auth"
+	"traverse/internal/ctx"
 	"traverse/internal/services"
 	"traverse/models"
 	"traverse/pkg/errors"
@@ -46,7 +47,7 @@ func (m *Middleware) TokenAuth(next http.Handler) http.Handler {
 		}
 
 		// save the user context when user is logged in
-		ctx := context.WithValue(r.Context(), "user", user)
+		ctx := ctx.SetUser(r, user)
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }
@@ -106,6 +107,17 @@ func (m *Middleware) LoggerMiddleware(next http.Handler) http.Handler {
 		)
 	})
 }
+
+// func (m *Middleware) RequireActivated(next http.Handler) http.Handler {
+// 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+// 		user, ok := r.Context().Value(auth.UserCtxKey).(*models.User)
+// 		if !ok || user == nil || !user.Activated {
+// 			http.Error(w, "account not activated", http.StatusForbidden)
+// 			return
+// 		}
+// 		next.ServeHTTP(w, r)
+// 	})
+// }
 
 // response wrapper for log middleware
 type response struct {
