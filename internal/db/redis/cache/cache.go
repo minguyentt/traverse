@@ -29,7 +29,7 @@ func New(client *redis.Client) (Redis, error) {
 func (c *userCache) Get(ctx context.Context, userKey string) ([]byte, error) {
 	val, err := c.inner.Get(ctx, userKey).Bytes()
 	if err == redis.Nil {
-		return nil, ErrCacheMiss // your own sentinel error
+		return nil, ErrCacheMiss
 	}
 	return val, err
 }

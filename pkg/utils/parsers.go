@@ -15,3 +15,7 @@ func ParseUint16(s string) (uint16, error) {
 
 	return uint16(parse), nil
 }
+
+func Int64ToStr(v int64) string {
+	return strconv.FormatInt(v, 10)
+}

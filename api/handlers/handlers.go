@@ -31,9 +31,9 @@ type Handlers struct {
 func New(deps *HandlerDeps, l *slog.Logger) *Handlers {
 	return &Handlers{
 		NewHealthHandler(),
-		NewAuthHandler(deps.Service.Users, deps.Validator, deps.Cache),
+		NewAuthHandler(deps.Service.Users, deps.Validator, deps.Cache, l.With("area", "auth")),
 		NewUserHandler(deps.Service.Users),
-		NewContract(deps.Service.Contract, deps.Validator, deps.Cache, l),
+		NewContract(deps.Service.Contract, deps.Validator, deps.Cache, l.With("area", "contract")),
 		NewReviewHandler(deps.Service.Review),
 	}
 }

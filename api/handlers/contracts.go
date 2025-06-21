@@ -21,6 +21,7 @@ import (
 
 type ContractHandler interface {
 	Feed(w http.ResponseWriter, r *http.Request)
+	ContractByID(w http.ResponseWriter, r *http.Request)
 	CreateContract(w http.ResponseWriter, r *http.Request)
 	UpdateContract(w http.ResponseWriter, r *http.Request)
 	DeleteContract(w http.ResponseWriter, r *http.Request)
@@ -34,28 +35,24 @@ type contract struct {
 }
 
 func NewContract(cs services.ContractService, v *validator.Validate, c cache.Redis, logger *slog.Logger) *contract {
-	l := logger.With("area", "contracts")
 	return &contract{
 		service:  cs,
 		validate: v,
 		cache:    c,
-		logger:   l,
+		logger:   logger,
 	}
 }
 
-func (h *contract) Feed(w http.ResponseWriter, r *http.Request) {
+func (h *contract) ContractByID(w http.ResponseWriter, r *http.Request) {
 	usr := ctx.GetUserFromCTX(r)
 
-	id := strconv.FormatInt(usr.ID, 10)
-	cacheKeyFeed := fmt.Sprintf("feed:user:%s", id)
+	id := utils.Int64ToStr(usr.ID)
+	key := fmt.Sprintf("user-%s:contract", id)
+	if data, err := h.cache.Get(r.Context(), key); err == nil {
+		var contract *models.Contract
+		if err := utils.Unmarshal(data, &contract); err == nil {
 
-	// 1. try getting feed from cache
-	data, err := h.cache.Get(r.Context(), cacheKeyFeed)
-	if err == nil {
-		var contracts []*models.ContractMetaData
-		if err := utils.Unmarshal(data, &contracts); err == nil {
-
-			if err := response.JSON(w, http.StatusOK, contracts); err != nil {
+			if err := response.JSON(w, http.StatusOK, contract); err != nil {
 				errors.InternalServerErr(w, r, err)
 			}
 			return
@@ -65,24 +62,68 @@ func (h *contract) Feed(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// 2. cache miss = call the DB
-	contracts, err := h.service.GetAllContracts(r.Context(), usr.ID)
+	contract, err := h.service.ContractByID(r.Context(), usr.ID)
 	if err != nil {
 		errors.InternalServerErr(w, r, err)
 		return
 	}
 
-	// 3. cache the feed
-	bytes, err := utils.Marshal(contracts)
+	bytes, err := utils.Marshal(contract)
 	if err == nil {
-		_ = h.cache.Set(r.Context(), cacheKeyFeed, bytes, 30*time.Second)
+		_ = h.cache.Set(r.Context(), key, bytes, 2*time.Minute)
 	} else {
-		h.logger.Warn("failed to marshal data to bytes for cache", "context", cacheKeyFeed, "err", err)
+		h.logger.Warn("failed to marshal data to bytes for cache", "context", key, "err", err)
 	}
 
-	if err := response.JSON(w, http.StatusOK, contracts); err != nil {
+	if err := response.JSON(w, http.StatusOK, contract); err != nil {
 		errors.InternalServerErr(w, r, err)
 		return
+	}
+}
+
+func (h *contract) Feed(w http.ResponseWriter, r *http.Request) {
+	usr := ctx.GetUserFromCTX(r)
+
+	id := strconv.FormatInt(usr.ID, 10)
+	cacheKeyFeed := fmt.Sprintf("user-%s:feed", id)
+
+	data, err := h.cache.Get(r.Context(), cacheKeyFeed)
+	// if Cache miss, call the db
+	if err == cache.ErrCacheMiss {
+		contracts, err := h.service.GetAllContracts(r.Context(), usr.ID)
+		if err != nil {
+			errors.InternalServerErr(w, r, err)
+			return
+		}
+
+		// Cache the result
+		bytes, err := utils.Marshal(contracts)
+		if err == nil {
+			_ = h.cache.Set(r.Context(), cacheKeyFeed, bytes, 30*time.Second)
+		} else {
+			h.logger.Warn("failed to marshal data to bytes for cache", "context", cacheKeyFeed, "err", err)
+		}
+
+		if err := response.JSON(w, http.StatusOK, contracts); err != nil {
+			errors.InternalServerErr(w, r, err)
+		}
+
+		return
+	}
+
+	if err != nil {
+		errors.InternalServerErr(w, r, err)
+		return
+	}
+
+	// Cache hit, unmarshal and return
+	var contracts []*models.ContractMetaData
+	if err := utils.Unmarshal(data, &contracts); err != nil {
+		errors.InternalServerErr(w, r, err)
+		return
+	}
+	if err := response.JSON(w, http.StatusOK, contracts); err != nil {
+		errors.InternalServerErr(w, r, err)
 	}
 }
 

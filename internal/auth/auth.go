@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"strconv"
 	"strings"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -24,19 +25,31 @@ func (auth *jwToken) Authenticate(ctx context.Context, r *http.Request) (any, er
 	if !ok {
 		return nil, fmt.Errorf("invalid token claims format")
 	}
-
 	// extract subject claim
 	rawID, ok := claims["sub"]
 	if !ok {
 		return nil, fmt.Errorf("missing subject claim")
 	}
 
-	userID, ok := rawID.(float64)
-	if !ok {
-		return nil, fmt.Errorf("invalid user ID format")
+	var userID int64
+
+	// avoids precision loss in float64 type
+	switch v := rawID.(type) {
+	case float64:
+		userID = int64(v)
+	case string:
+		userID, err = strconv.ParseInt(v, 10, 64)
+		if err != nil {
+			return nil, fmt.Errorf("invalid user ID format in string: %w", err)
+		}
+	default:
+		return nil, fmt.Errorf("unexpected type for subject claim")
 	}
 
-	return int64(userID), nil
+	// if needed for downstream use
+	claims["sub"] = strconv.FormatInt(userID, 10)
+
+	return userID, nil
 }
 
 // responsible for fetching the header from user request

@@ -1,9 +1,10 @@
 package handlers
 
 import (
+	errs "errors"
 	"fmt"
+	"log/slog"
 	"net/http"
-	"strconv"
 	"time"
 	"traverse/internal/db/redis/cache"
 	"traverse/internal/services"
@@ -14,6 +15,7 @@ import (
 	"traverse/pkg/utils"
 
 	"github.com/go-playground/validator/v10"
+	"github.com/redis/go-redis/v9"
 )
 
 type AuthHandler interface {
@@ -26,13 +28,15 @@ type authHandler struct {
 	service  services.UserService
 	validate *validator.Validate
 	cache    cache.Redis
+	logger   *slog.Logger
 }
 
-func NewAuthHandler(s services.UserService, v *validator.Validate, c cache.Redis) *authHandler {
+func NewAuthHandler(s services.UserService, v *validator.Validate, c cache.Redis, logger *slog.Logger) *authHandler {
 	return &authHandler{
 		service:  s,
 		validate: v,
-		cache: c,
+		cache:    c,
+		logger: logger,
 	}
 }
 
@@ -84,7 +88,7 @@ func (u *authHandler) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	userToken, err := u.service.LoginUser(r.Context(), &payload)
+	res, err := u.service.LoginUser(r.Context(), &payload)
 	if err != nil {
 		errors.UnauthorizedErr(w, r, err)
 		return
@@ -92,21 +96,20 @@ func (u *authHandler) Login(w http.ResponseWriter, r *http.Request) {
 
 	ctx := r.Context()
 
-	data, err := utils.Marshal(&userToken)
+	key := fmt.Sprintf("activation:%s", res.Token)
+	userID, err := utils.Marshal(&res.ID)
+	if err != nil {
+		errors.InternalServerErr(w, r, err)
+		return
+	}
+	// cache the token as the key, val will be the userID
+	err = u.cache.Set(ctx, key, userID, 24*time.Hour)
 	if err != nil {
 		errors.InternalServerErr(w, r, err)
 		return
 	}
 
-	// upon login request we will cache the user token session for 24 hrs
-	userCacheKey := fmt.Sprintf("user-%d:activation", userToken.ID)
-	err = u.cache.Set(ctx, userCacheKey, data, 24*time.Hour)
-	if err != nil {
-		errors.InternalServerErr(w, r, err)
-		return
-	}
-
-	if err := response.JSON(w, http.StatusAccepted, userToken); err != nil {
+	if err := response.JSON(w, http.StatusAccepted, res.Token); err != nil {
 		errors.InternalServerErr(w, r, err)
 		return
 	}
@@ -115,40 +118,40 @@ func (u *authHandler) Login(w http.ResponseWriter, r *http.Request) {
 func (a *authHandler) ActivateUser(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
-	user, ok := ctx.Value("user").(*models.User)
-	if !ok || user == nil {
-		errors.UnauthorizedErr(w, r, fmt.Errorf("invalid user token"))
+	// get token from query
+	token := r.URL.Query().Get("token")
+	if token == "" {
+		errors.BadRequestResponse(w, r, fmt.Errorf("missing token parameter"))
 		return
 	}
 
-	// get the user token from cache
-	// handle misses
-	var userTokenData *models.UserToken
-	userid := strconv.FormatInt(user.ID, 10)
-	data, err := a.cache.Get(r.Context(), userid)
+	// Look up user ID using token as key
+	key, err := a.cache.Get(ctx, fmt.Sprintf("activation:%s", token))
 	if err != nil {
-		errors.InternalServerErr(w, r, err)
-		return
-	}
-
-	err = utils.Unmarshal(data, &userTokenData)
-	if err != nil {
-		errors.InternalServerErr(w, r, err)
-		return
-	}
-
-	err = a.service.ActivateUser(r.Context(), userTokenData.Token)
-	if err != nil {
-		switch err {
-		case storage.ErrNotFound:
-			errors.NotFoundRequest(w, r, err)
-		default:
+		if errs.Is(err, redis.Nil) {
+			errors.NotFoundRequest(w, r, fmt.Errorf("activation token not found or expired"))
+		} else {
 			errors.InternalServerErr(w, r, err)
 		}
 		return
 	}
 
-	if err := response.JSON(w, http.StatusNoContent, ""); err != nil {
+	err = a.service.ActivateUser(ctx, token)
+	if err != nil {
+		if errs.Is(err, storage.ErrNotFound) {
+			errors.NotFoundRequest(w, r, err)
+		} else {
+			errors.InternalServerErr(w, r, err)
+		}
+		return
+	}
+
+	if err := a.cache.Delete(ctx, string(key)); err != nil && err != cache.ErrCacheMiss {
+		a.logger.Warn("failed to delete cache key", "key", key, "err", err)
+	}
+
+	// Send 204 No Content or 200
+	if err := response.JSON(w, http.StatusNoContent, nil); err != nil {
 		errors.InternalServerErr(w, r, err)
 		return
 	}
