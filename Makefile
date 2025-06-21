@@ -1,10 +1,20 @@
 include .env
 
 # Phony targets
-.PHONY: help migrate-up migrate-down migrate-create migrate-fix migrate-status migrate-reset
+.PHONY: help migrate-up migrate-down migrate-create migrate-fix migrate-status migrate-reset dev-tools lint test
 
-build:
-	@go build -o traverse ./cmd/api
+dev-tools:
+	go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
+	go mod download
+
+lint:
+	go tool golangci-lint run ./...
+
+test:
+	go test -race -cover ./...
+
+build: lint test
+	@go build -o bin/api ./cmd/api
 
 run-api: build
 	@./traverse
