@@ -26,26 +26,21 @@ type countMinSketch struct {
 	counter  [][]uint64
 }
 
-type SketchOpts struct {
-	Buckets uint
-	Depth uint
-}
-
-func NewCMS(s *SketchOpts) (*countMinSketch, error) {
-	if s.Buckets <= 0 || s.Depth <= 0 {
+func NewCMS(buckets uint, depth uint) (*countMinSketch, error) {
+	if buckets <= 0 || depth <= 0 {
 		return nil, fmt.Errorf("depth and buckets should be greater than 0")
 	}
 
 	cms := &countMinSketch{
-		buckets:  s.Buckets,
-		depth:    s.Depth,
+		buckets:  buckets,
+		depth:    depth,
 		hashFunc: fnv.New64(), // lower risk of collisions w/ fnv hash 64bit
 	}
 
-	cms.counter = make([][]uint64, s.Depth)
+	cms.counter = make([][]uint64, depth)
 
-	for i := uint(0); i < s.Depth; i++ {
-		cms.counter[i] = make([]uint64, s.Buckets)
+	for i := uint(0); i < depth; i++ {
+		cms.counter[i] = make([]uint64, buckets)
 	}
 
 	return cms, nil

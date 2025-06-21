@@ -47,7 +47,7 @@ func (h *contract) Feed(w http.ResponseWriter, r *http.Request) {
 	usr := ctx.GetUserFromCTX(r)
 
 	id := strconv.FormatInt(usr.ID, 10)
-	cacheKeyFeed := fmt.Sprintf("feed:user:%d", id)
+	cacheKeyFeed := fmt.Sprintf("feed:user:%s", id)
 
 	// 1. try getting feed from cache
 	data, err := h.cache.Get(r.Context(), cacheKeyFeed)
@@ -55,7 +55,7 @@ func (h *contract) Feed(w http.ResponseWriter, r *http.Request) {
 		var contracts []*models.ContractMetaData
 		if err := utils.Unmarshal(data, &contracts); err == nil {
 
-			if err := response.JSON(w, http.StatusOK, err); err != nil {
+			if err := response.JSON(w, http.StatusOK, contracts); err != nil {
 				errors.InternalServerErr(w, r, err)
 			}
 			return

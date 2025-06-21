@@ -7,16 +7,11 @@ import (
 	"time"
 )
 
+//FIX: TESTING!!!!!
 func TestSlidingWindowBehavior(t *testing.T) {
 	fmt.Println("\n=== Testing Sliding Window Behavior ===")
 
-	opts := &SketchOpts{
-		Buckets: 1000,
-		Depth:   3,
-	}
-
-	// Short window for testing
-	rl := New(opts, 5, 200*time.Millisecond, 3)
+	rl := New(nil)
 	defer rl.ticker.Stop()
 
 	key := "sliding_test"
@@ -51,12 +46,8 @@ func TestSlidingWindowBehavior(t *testing.T) {
 func TestMultipleUsers(t *testing.T) {
 	fmt.Println("\n=== Testing Multiple Users ===")
 
-	opts := &SketchOpts{
-		Buckets: 1000,
-		Depth:   3,
-	}
 
-	rl := New(opts, 3, time.Second, 2)
+	rl := New(nil)
 	defer rl.ticker.Stop()
 
 	users := []string{"alice", "bob", "charlie"}
@@ -83,12 +74,8 @@ func TestMultipleUsers(t *testing.T) {
 func TestConcurrency(t *testing.T) {
 	fmt.Println("\n=== Testing Concurrency ===")
 
-	opts := &SketchOpts{
-		Buckets: 1000,
-		Depth:   3,
-	}
 
-	rl := New(opts, 50, time.Second, 3)
+	rl := New(nil)
 	defer rl.ticker.Stop()
 
 	var wg sync.WaitGroup
@@ -135,12 +122,8 @@ func TestConcurrency(t *testing.T) {
 
 // BenchmarkRateLimiter benchmarks the rate limiter performance
 func BenchmarkRateLimiter(b *testing.B) {
-	opts := &SketchOpts{
-		Buckets: 1000,
-		Depth:   3,
-	}
 
-	rl := New(opts, 1000, time.Second, 5)
+	rl := New(nil)
 	defer rl.ticker.Stop()
 
 	keys := make([]string, 100)

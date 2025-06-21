@@ -11,6 +11,7 @@ import (
 	"traverse/configs"
 	"traverse/internal/auth"
 	"traverse/internal/ctx"
+	"traverse/internal/ratelimit"
 	"traverse/internal/services"
 	"traverse/models"
 	"traverse/pkg/errors"
@@ -20,15 +21,30 @@ type Middleware struct {
 	// figure out what the mw deps are
 	auth.TokenAuthenticator
 	services.UserService
+	*ratelimit.RateLimiter
 	logger *slog.Logger
 }
 
-func New(jwt auth.TokenAuthenticator, serv services.UserService, logger *slog.Logger) *Middleware {
+func New(jwt auth.TokenAuthenticator, serv services.UserService, rl *ratelimit.RateLimiter, logger *slog.Logger) *Middleware {
 	return &Middleware{
 		jwt,
 		serv,
+		rl,
 		logger,
 	}
+}
+
+func (m *Middleware) RateLimiterWithCMS(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		m.logger.Warn("rate limit hit", "ip", r.RemoteAddr)
+		limitHit := m.Update(r.RemoteAddr)
+		if !limitHit {
+			m.logger.Warn("an ip has been blocked due to hitting limit", "ip", r.RemoteAddr)
+			return
+		}
+
+		next.ServeHTTP(w, r)
+	})
 }
 
 func (m *Middleware) TokenAuth(next http.Handler) http.Handler {

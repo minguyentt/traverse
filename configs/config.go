@@ -74,6 +74,15 @@ type RedisConfig struct {
 	Enabled  bool
 }
 
+type RateLimitConfig struct {
+	Buckets uint
+	Depth   uint
+
+	Limit  int
+	Window time.Duration
+	NumWin int
+}
+
 var Env = LoadEnvs()
 
 func LoadEnvs() *Config {
@@ -126,6 +135,30 @@ func LoadEnvs() *Config {
 			Enabled:  true,
 		},
 	}
+}
+
+func RateLimitType(t string) *RateLimitConfig {
+	if t == "standard" {
+		return &RateLimitConfig{
+			Buckets: 10000,
+			Depth:   4,
+			Limit:   100,
+			Window:  time.Minute,
+			NumWin:  5,
+		}
+	}
+
+	if t == "high_traffic" {
+		return &RateLimitConfig{
+			Buckets: 50000,
+			Depth:   5,
+			Limit:   500,
+			Window:  time.Minute,
+			NumWin:  3,
+		}
+	}
+
+	return nil
 }
 
 func (c *DBConfig) String() string {

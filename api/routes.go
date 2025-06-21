@@ -19,6 +19,7 @@ func (api *api) mount() http.Handler {
 	api.mux.Use(middleware.Recoverer)
 	api.mux.Use(cors.Handler(configs.WithCorsOpts()))
 
+	api.mux.Use(api.middleware.RateLimiterWithCMS)
 	api.mux.Use(middleware.Timeout(60 * time.Second))
 
 	api.mux.Route("/v1", func(r chi.Router) {
@@ -44,13 +45,6 @@ func (api *api) mountUserRoutes(r chi.Router) {
 		user.Get("/{userID}", api.handler.GetUser)
 	})
 
-	// Admin Only routes
-	// r.Group(func(admin chi.Router) {
-	// 	admin.Route("/users", func(users chi.Router) {
-	//			NEED ADMIN ONLY MIDDLEWARE
-	// 		users.Get("/", api.handler.GetUsers)
-	// 	})
-	// })
 }
 
 func (api *api) mountContractRoutes(r chi.Router) {

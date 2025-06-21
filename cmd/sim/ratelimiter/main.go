@@ -2,18 +2,15 @@ package main
 
 import (
 	"fmt"
-	"time"
+	"traverse/configs"
 	"traverse/internal/ratelimit"
 )
 
 func main() {
-	opts := &ratelimit.SketchOpts{
-		Buckets: 1000,
-		Depth:   3,
-	}
 
+	cfg := configs.RateLimitType("testing")
 	// Using fixed implementation
-	rl := ratelimit.New(opts, 10, time.Second, 5)
+	rl := ratelimit.New(cfg)
 
 	key := "user123"
 	accepted := 0

@@ -20,6 +20,7 @@ import (
 	"traverse/internal/db"
 	"traverse/internal/db/redis/cache"
 	"traverse/internal/middlewares"
+	"traverse/internal/ratelimit"
 	"traverse/internal/services"
 	"traverse/internal/storage"
 	"traverse/pkg/validator"
@@ -66,6 +67,10 @@ func (s *server) SetupAPIV1(
 ) (*api, error) {
 	// wiring api deps
 
+	rlcfg := configs.RateLimitType("standard")
+	// rate limiter
+	ratelimiter := ratelimit.New(rlcfg, s.logger.With("area", "rate limiter"))
+
 	rdsCache, err := cache.New(s.redis)
 	assert.NoError(err, "failed to create new redis cache")
 
@@ -82,7 +87,7 @@ func (s *server) SetupAPIV1(
 
 	handlers := handlers.New(&deps, s.logger)
 
-	mw := middlewares.New(jwt, service.Users, s.logger)
+	mw := middlewares.New(jwt, service.Users, ratelimiter, s.logger)
 
 	assert.NotNil(handlers, "nil encounter")
 	assert.NotNil(service, "nil encounter")
