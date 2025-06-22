@@ -67,14 +67,14 @@ func (r *RateLimiter) Update(key string) bool {
 	r.sketches[r.currentIdx].Update([]byte(key), 1)
 	r.mu.Unlock()
 
-	r.mu.RLock()
 	// Sum estimates from all windows
 	count := uint64(0)
 	for _, s := range r.sketches {
 		count += s.Estimate([]byte(key))
 	}
-	r.mu.RUnlock()
+
 	r.logger.Warn("estimated count update", "key", key, "count", count)
+
 	return count <= uint64(r.limit)
 }
 

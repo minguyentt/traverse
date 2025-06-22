@@ -96,15 +96,32 @@ func (c *countMinSketch) Estimate(key []byte) uint64 {
 	return min
 }
 
+// merge streams isnt implemented yet
+// will be used for near future if i decide to scale distribution
 func (c *countMinSketch) MergeStreams(cms *countMinSketch) error {
-	assert.Assert(c.depth != cms.depth, "merging streams must match matrix depth")
-	assert.Assert(c.buckets != cms.buckets, "merging streams must match matrix buckets")
+    if cms == nil {
+        return fmt.Errorf("cannot merge with nil count-min sketch")
+    }
 
-	for i := uint(0); i < c.depth; i++ {
-		for j := uint(0); j < c.buckets; j++ {
-			c.counter[i][j] += cms.counter[i][j]
-		}
-	}
+    if c.depth != cms.depth {
+        return fmt.Errorf("cannot merge sketches with different depths: %d vs %d", c.depth, cms.depth)
+    }
 
-	return nil
+    if c.buckets != cms.buckets {
+        return fmt.Errorf("cannot merge sketches with different bucket counts: %d vs %d", c.buckets, cms.buckets)
+    }
+
+    // Perform the merge
+    for i := uint(0); i < c.depth; i++ {
+        for j := uint(0); j < c.buckets; j++ {
+            // Check for overflow before adding
+            if c.counter[i][j] > math.MaxUint64 - cms.counter[i][j] {
+                return fmt.Errorf("merge overflow at position [%d][%d]: %d + %d would exceed max uint64",
+                    i, j, c.counter[i][j], cms.counter[i][j])
+            }
+            c.counter[i][j] += cms.counter[i][j]
+        }
+    }
+
+    return nil
 }
