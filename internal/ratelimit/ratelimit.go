@@ -54,10 +54,21 @@ func (r *RateLimiter) Rotate() {
 		r.currentIdx = (r.currentIdx + 1) % len(r.sketches)
 
 		// Create new sketch for the new current window
-		cms, _ := NewCMS(r.buckets, r.depth)
-		r.sketches[r.currentIdx] = cms
+		// ISSUE: this causes memory overhead
+		// cms, _ := NewCMS(r.buckets, r.depth)
+		// r.sketches[r.currentIdx] = cms
+
+		r.sketches[r.currentIdx].Reset()
 		r.mu.Unlock()
 		r.logger.Warn("sketch rotation", "window", r.currentIdx)
+	}
+}
+
+func (c *countMinSketch) Reset() {
+	for i := range c.counter {
+		for j := range c.counter[i] {
+			c.counter[i][j] = 0
+		}
 	}
 }
 
@@ -72,8 +83,6 @@ func (r *RateLimiter) Update(key string) bool {
 	for _, s := range r.sketches {
 		count += s.Estimate([]byte(key))
 	}
-
-	r.logger.Warn("estimated count update", "key", key, "count", count)
 
 	return count <= uint64(r.limit)
 }

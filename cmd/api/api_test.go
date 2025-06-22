@@ -11,39 +11,27 @@ import (
 )
 
 func TestCountMinSketchRateLimiter(t *testing.T) {
-}
+	cfg := configs.Env.RATELIMIT.Test
+	rl := ratelimit.New(cfg)
+	defer rl.StopTicker()
 
-// func TestSlidingWindowBehavior(t *testing.T) {
-// 	cfg := configs.Env.RATELIMIT.Test
-// 	rl := ratelimit.New(cfg, nil)
-// 	defer rl.StopTicker()
-//
-// 	key := "sliding_window"
-//
-// 	t.Run("Should fill up the limit", func(t *testing.T) {
-// 		for i := range 5 {
-// 			if accepted := rl.Update(key); !accepted {
-// 				t.Errorf("expected request %d to be accepted", i+1)
-// 			}
-// 		}
-// 	})
-//
-// 	t.Run("should be rejected", func(t *testing.T) {
-// 		for i := range 3 {
-// 			if accepted := rl.Update(key); accepted {
-// 				t.Errorf("expected overflow request %d to be rejected", i+1)
-// 			}
-// 		}
-// 	})
-//
-// 	t.Run("Should accept again after window slide", func(t *testing.T) {
-// 		for i := range 4 {
-// 			if accepted := rl.Update(key); !accepted {
-// 				t.Errorf("expected request %d after sliding window to be accepted", i+1)
-// 			}
-// 		}
-// 	})
-// }
+	key1 := "userA"
+	key2 := "userB"
+
+	for i := range cfg.Limit {
+		accepted := rl.Update(key1)
+		if !accepted {
+			t.Errorf("expected request %d from keyA to be accepted", i+1)
+		}
+	}
+
+	// Simulate key2 with potential hash collision
+	accepted := rl.Update(key2)
+
+	if !accepted {
+		t.Log("possible false positive: keyB rejected due to hash collision with keyA")
+	}
+}
 
 func TestMultipleUsers(t *testing.T) {
 	cfg := configs.Env.RATELIMIT.Test
